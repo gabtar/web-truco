@@ -4,12 +4,12 @@ from typing import List, TypedDict
 from random import shuffle
 import json
 
-from fastapi import WebSocket
-
-
 # TODO
-# Armar modelos con db -> sqlite
-# Servicio/Game manager con excepciones
+# Mas adelante armar los modelos con db -> sqlite?
+# En la documentación de websockets con fastapi
+# hay una forma de guardar las connexiones de socket con redis, averiguar
+# Agregar tests -> pytest
+
 
 class Suit(str, Enum):
     """ Suits of spanish cards """
@@ -72,7 +72,6 @@ class Card:
         self.value = value
 
     def to_json(self):
-        # return {"rank": self.rank.value, "suit": self.suit.value}
         return json.dumps({"rank": self.rank.value, "suit": self.suit.value})
 
     def __eq__(self, other) -> bool:
@@ -89,6 +88,7 @@ class Card:
 
 
 class Deck:
+    """ A deck of spanish cards for truco game """
     cards: List[Card] = []
 
     def __init__(self):
@@ -100,22 +100,19 @@ class Deck:
         shuffle(self.cards)
 
 
-class Player:
-    name: str
-
-
 class PlayerCards(TypedDict):
-    player: WebSocket
+    player: str
     cards: List[Card]
 
 
 class Hand:
     deck: Deck
-    players: List[WebSocket]
+    players: List[str]
     turn: int
     cards_dealed: List[PlayerCards]
     current_round: int = 0
-    table: PlayerCards
+    # TODO, modelar las cartas en mesa
+    # table: PlayerCards
 
     def __init__(self):
         self.deck = Deck()
@@ -125,10 +122,9 @@ class Hand:
     def deal_cards(self):
         """Deal 3 cards for each player"""
         self.deck.shuffle()
-
+        # TODO, ojo que con pop esta mutando el mazo
         for player in self.players:
             self.cards_dealed[player] = [self.deck.cards.pop() for _ in range(3)]
-
 
     def play_card(self, player_id, card_id):
         """ Play a card """
