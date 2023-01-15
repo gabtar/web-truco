@@ -1,7 +1,7 @@
 /* Truco game  */
 export interface Game {
-  name: string,
-  handId: number
+  id: number,
+  name: string
 }
 
 /* Card */

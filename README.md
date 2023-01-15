@@ -1,13 +1,14 @@
 # WebSocket TRUCO
 
-Juego de Truco Argentino utilizando websockets
+Juego de Truco Argentino usando websockets
 
 ## EN PROGESO / TODO:
 
 ### Backend:
-- [ ] Modelos con pydantic.
-- [ ] Conectar a alguna DB para guardar los modelos.
+- [x] Modelos con pydantic.
+- [x] Conectar a alguna DB para guardar los modelos.
 - [ ] Tests
+- [ ] Validaciones
 - [ ] Agregar jugar carta
 
 ### Frontend:

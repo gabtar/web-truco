@@ -18,12 +18,12 @@ function GamesList({ currentGames, playerId } : props) {
   }
 
   const gamesList = currentGames.map((game: Game) => 
-    <li key={game.handId}>
+    <li key={game.id}>
       <div>
         {game.name}
       </div>
       <div>
-        <button type="button" className="btn" onClick={() => handleJoinGame(game.handId)}>Unirse</button> 
+        <button type="button" className="btn" onClick={() => handleJoinGame(game.id)}>Unirse</button> 
       </div>
     </li>
   );

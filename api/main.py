@@ -1,10 +1,10 @@
 import uuid
 import json
+import random
 
-from typing import List
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 
-from models.models import Hand
+from models.models import Player, Hand, PlayerCard
 
 
 app = FastAPI()
@@ -17,9 +17,9 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         """ Adds a new websocket connection """
         await websocket.accept()
-        player_id = str(uuid.uuid4())
-        self.active_connections[player_id] = websocket
-        await websocket.send_text(json.dumps({"event": "connect", "playerId": player_id}))
+        player = Player().save()
+        self.active_connections[player.id] = websocket
+        await websocket.send_text(json.dumps({"event": "connect", "playerId": player.id}))
 
     def disconnect(self, websocket: WebSocket):
         """ Removes a websocket connection """
@@ -41,24 +41,28 @@ class ConnectionManager:
 
 class HandManager:
     """ Manages hands of Truco """
-    hand_list: List[Hand] = []
 
-    def __init__(self, connection_manager):
+    def __init__(self, connection_manager: ConnectionManager):
         self.connection_manager = connection_manager
 
     async def deal_cards(self, hand_id: int):
         """ Deals cards for all players for an specific game/hand_id """
-        hand_to_deal = None
-        for hand in self.hand_list:
-            if hand.hand_id == hand_id:
-                hand_to_deal = hand
+        hand = Hand.get_current_players(hand_id=hand_id)
+        players = Hand.get_current_players(hand_id=hand_id)
+        # Select N random cards
+        card_ids = random.sample(range(1, 41), len(players) * 3) 
+        current_card = 0
 
-        hand_to_deal.deal_cards()
+        for player in players:
+            cards_dealed = []
+            for i in range(3):
+                cards_dealed.append(PlayerCard(player_id=player.id, card_id=card_ids[current_card]).save())
+                current_card += 1
 
-        for player in hand_to_deal.players:
-            cards_list = [card.to_json() for card in hand_to_deal.cards_dealed[player]]
+            cards_list = [card.dict(include={'rank', 'suit'}) for card in cards_dealed]
             message = json.dumps({"event": "receiveDealedCards", "cards": cards_list})
-            await self.connection_manager.send(json_string=message,player_id=player)
+            await self.connection_manager.send(json_string=message,player_id=player.id)
+
 
     def play_card(self, hand_id: int, player_id: str, card_id: int):
         """ Performs a card play on a game """
@@ -68,30 +72,39 @@ class HandManager:
 
     async def games_update(self):
         """ Updates the games list to all players connected in WebSocket """
-        current_games = [game.to_json() for game in self.hand_list]
+        # Debería ser get_avaliables_games() -> sólo aquellos que tienen lugares disponibles
+        games_list = Hand.get_all()
+        current_games = [game.dict(include={'id', 'name'}) for game in games_list]
         games_update = json.dumps({"event": "gamesUpdate", "currentGames": current_games})
+        # current_games = [game.to_json() for game in self.hand_list]
+        # games_update = json.dumps({"event": "gamesUpdate", "currentGames": current_games})
         await self.connection_manager.broadcast(games_update)
 
     async def join_hand(self, hand_id: int, player_id: str):
         """ Joins to an specific hand """
         # TODO, Validar que haya lugar y aniadir al jugador al juego
-        self.hand_list[hand_id].players.append(player_id)
-        # Send the hand id:
+        player = Player.get_by_id(id=player_id)
+
+        # if player.playing_hand is not None:
+        #     raise Exception
+
+        player.playing_hand = hand_id
+        player.update()
+
         message = json.dumps({"event": "joinedHand", "handId": hand_id})
+        print(message)
         await self.connection_manager.send(json_string=message, player_id=player_id)
 
     async def new_hand(self, player_id: str) -> int:
         """ Creates a new hand/game """
         # TODO, validate user is not currently playing a game
-        hand_id = len(self.hand_list)
-        self.hand_list.append(Hand(hand_id=hand_id))
-        return hand_id
+        player = Player.get_by_id(id=player_id)
+        hand = Hand(id=len(Hand.get_all())+1).save()
+
+        return hand.id
 
 
 manager = ConnectionManager()
-
-# TODO, ojo, por ahora acá porque necesisto persistir las partidas en algún lado
-game_manager = HandManager(manager)
 
 
 @app.websocket("/ws")
@@ -102,6 +115,7 @@ async def websocket_endpoint(websocket: WebSocket):
     # TODO, Una vez connectado enviarle un update de las partidas en juego
     try:
         while True:
+            game_manager = HandManager(manager)
             # TODO, buscar algun tipo de routeo segun el tipo de evento
             # Una especie de controlador de WebSocket, ej
             # -> socketController.execute(action=data['event'], payload=data['payload'])
