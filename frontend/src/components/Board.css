@@ -1,0 +1,17 @@
+.card-container {
+  display: flex;
+  justify-content: center;
+}
+
+.spanish-card {
+  margin: .5rem;
+  padding: 3rem 1.5rem;
+  border-radius: .2rem;
+  border: 1px solid #000;
+  cursor: pointer;
+  box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2);
+}
+
+.spanish-card:hover {
+  transform: scale(1.02);
+}

@@ -1,17 +1,39 @@
 import { useWebSocket } from '../socket'
+import { Game } from '../types'
+import './GamesList.css'
 
-function GamesList({ totalGames } : any) {
+interface props {
+  currentGames: Game[],
+  playerId: string
+}
+
+function GamesList({ currentGames, playerId } : props) {
   const socket = useWebSocket();
 
-  // TODO, for testing only
-  const handleCreateNewGame = () => socket.send('{"event": "createNewGame", "player_id": "1111"}');
+  const handleCreateNewGame = () => {
+    socket.send(`{"event": "createNewGame", "playerId": "${playerId}"}`);
+  }
+  const handleJoinGame = (handId: number) => {
+    socket.send(`{"event": "joinGame", "playerId": "${playerId}", "handId": "${handId}"}`);
+  }
+
+  const gamesList = currentGames.map((game: Game) => 
+    <li key={game.handId}>
+      <div>
+        {game.name}
+      </div>
+      <div>
+        <button type="button" className="btn" onClick={() => handleJoinGame(game.handId)}>Unirse</button> 
+      </div>
+    </li>
+  );
 
   return (
     <>
       <ul>
-        <h1>{totalGames}</h1>
+        {gamesList}
       </ul>
-      <input type="button" value="Crear partida" onClick={handleCreateNewGame} />
+      <input type="button" className="btn" value="Crear partida" onClick={handleCreateNewGame} />
     </>
   )
   

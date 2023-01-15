@@ -1,8 +1,7 @@
 # Base models for the game
 from enum import Enum
-from typing import List, TypedDict
+from typing import List, Dict
 from random import shuffle
-import json
 
 # TODO
 # Mas adelante armar los modelos con db -> sqlite?
@@ -72,7 +71,10 @@ class Card:
         self.value = value
 
     def to_json(self):
-        return json.dumps({"rank": self.rank.value, "suit": self.suit.value})
+        """ Returns a dict representation of the class """
+        # TODO, esto es to_dict porque el json.dumps lo hace json al final,
+        # sino lo toma como string de json y con JSON.parse en js no lo parsea a objeto de js
+        return {"rank": self.rank.value, "suit": self.suit.value}
 
     def __eq__(self, other) -> bool:
         """ Define equal cards """
@@ -100,32 +102,37 @@ class Deck:
         shuffle(self.cards)
 
 
-class PlayerCards(TypedDict):
-    player: str
-    cards: List[Card]
-
-
 class Hand:
+    hand_id: int
+    name: str
     deck: Deck
     players: List[str]
-    turn: int
-    cards_dealed: List[PlayerCards]
+    cards_dealed: Dict[str, List[Card]]
+    player_turn: str
+    # cards_dealed: List[PlayerCards]
     current_round: int = 0
     # TODO, modelar las cartas en mesa
     # table: PlayerCards
 
-    def __init__(self):
+    def __init__(self, hand_id: int):
         self.deck = Deck()
         self.players = []
-        self.cards_dealed = PlayerCards()
+        self.cards_dealed = {}
+        self.hand_id = hand_id
+        self.name = f"Mano #{hand_id}"
 
     def deal_cards(self):
-        """Deal 3 cards for each player"""
+        """ Deal 3 cards for each player """
         self.deck.shuffle()
-        # TODO, ojo que con pop esta mutando el mazo
+        # TODO, ojo que con pop está mutando el mazo
         for player in self.players:
             self.cards_dealed[player] = [self.deck.cards.pop() for _ in range(3)]
 
     def play_card(self, player_id, card_id):
         """ Play a card """
         pass
+
+    def to_json(self):
+        # TODO, ojo aca!!! Debería ser to dict, porque el json.dump se hace después cuando
+        # manda la lista de games
+        return {"name": self.name, "handId": self.hand_id}
