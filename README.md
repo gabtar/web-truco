@@ -16,4 +16,5 @@ Juego de Truco Argentino usando websockets
 - [ ] Usar la context API de react para guardar estado de la partida/juego
 
 ### Otros:
-- [ ] Dockerizar en algún momento
+- [x] Dockerizar en algún momento
+- [ ] Averiguar seguridad/autorización/cors en websocket

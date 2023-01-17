@@ -106,6 +106,7 @@ class Player(BaseModel):
         return self
 
 
+# TODO, rename to CardDealer o algo parecido?
 class PlayerCard(BaseModel):
     """ The cards the player is holding during a Hand event """
     player_id: str
@@ -129,6 +130,7 @@ class PlayerCard(BaseModel):
 
         return cards
 
+    # deal_card?
     def save(self) -> Card:
         with sqlite3.connect("db.sqlite3") as con:
             cur = con.cursor()
@@ -269,15 +271,3 @@ class Hand(BaseModel):
             con.commit()
 
         return self
-
-    # TODO, extract to service
-    def deal_cards(self):
-        """ Deal 3 cards for each player """
-        self.deck.shuffle()
-        # TODO, ojo que con pop está mutando el mazo
-        for player in self.players:
-            self.cards_dealed[player] = [self.deck.cards.pop() for _ in range(3)]
-
-    def play_card(self, player_id, card_id):
-        """ Play a card """
-        pass

@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  backend:
+    restart: always
+    container_name: back
+    build:
+      context: ./api/
+      dockerfile: Dockerfile
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./api:/app
+    ports:
+      - "80:80"
+
+  frontend:
+    restart: always
+    command: ["npm", "start"]
+    container_name: front
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    depends_on:
+      - backend

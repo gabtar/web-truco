@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactChild, ReactNode } from "react";
 
-const ws = new WebSocket("ws://localhost:8000/ws");
+const ws = new WebSocket("ws://localhost:80/ws");
 
 // Context
 export const SocketContext = createContext(ws);
