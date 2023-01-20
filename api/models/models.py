@@ -1,10 +1,22 @@
 from __future__ import annotations
 import uuid
+import os
 import sqlite3
 
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional
+
+
+def get_connection():
+    """
+    Helper for database connection
+    If tests are running will return a connection to a test db
+    """
+    con = sqlite3.connect(os.getenv("TEST_DB", "db.sqlite3"))
+    con.row_factory = sqlite3.Row
+
+    return con
 
 
 class NotFound(Exception):
@@ -62,29 +74,28 @@ def get_value_of_card(rank: Rank, suit: Suit) -> int:
 
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str = "Anonymous"
+    name: str = "Anónimo"
     playing_hand: Optional[int]
 
     @classmethod
-    def get_by_id(cls, id: str) -> Player:
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
+    def get_by_id(cls, player_id: str) -> Player:
+        con = get_connection()
 
         cur = con.cursor()
-        cur.execute("SELECT * FROM player WHERE id = ?", (id,))
+        cur.execute("SELECT * FROM player WHERE id = ?", (player_id,))
 
         record = cur.fetchone()
 
         if record is None:
             raise NotFound
 
-        player = cls(**record)  # Row can be unpacked as dict
+        player = cls(**record)
         con.close()
 
         return player
 
     def update(self) -> Player:
-        with sqlite3.connect("db.sqlite3") as con:
+        with get_connection() as con:
             cur = con.cursor()
             cur.execute(
                 "UPDATE player SET name=?,playing_hand=? WHERE id = ?",
@@ -95,7 +106,7 @@ class Player(BaseModel):
         return self
 
     def save(self) -> Player:
-        with sqlite3.connect("db.sqlite3") as con:
+        with get_connection() as con:
             cur = con.cursor()
             cur.execute(
                 "INSERT INTO player (id,name) VALUES(?, ?)",
@@ -104,43 +115,6 @@ class Player(BaseModel):
             con.commit()
 
         return self
-
-
-# TODO, rename to CardDealer o algo parecido?
-class PlayerCard(BaseModel):
-    """ The cards the player is holding during a Hand event """
-    player_id: str
-    card_id: int
-
-    @classmethod
-    def get_cards_by_player_id(cls, player_id: str) -> List[Card]:
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM playercard WHERE player_id = ?", (player_id,))
-
-        records = cur.fetchall()
-
-        if records is None:
-            raise NotFound
-
-        cards = [Card.get_by_id(card[1]) for card in records]
-        con.close()
-
-        return cards
-
-    # deal_card?
-    def save(self) -> Card:
-        with sqlite3.connect("db.sqlite3") as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO playercard (player_id, card_id) VALUES(?, ?)",
-                (self.player_id, self.card_id)
-            )
-            con.commit()
-
-        return Card.get_by_id(self.card_id)
 
 
 class Card(BaseModel):
@@ -164,8 +138,7 @@ class Card(BaseModel):
 
     @classmethod
     def get_by_id(cls, id: int) -> Card:
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
+        con = get_connection()
 
         cur = con.cursor()
         cur.execute("SELECT * FROM card WHERE id = ?", (id,))
@@ -181,7 +154,7 @@ class Card(BaseModel):
         return card
 
     def save(self) -> Card:
-        with sqlite3.connect("db.sqlite3") as con:
+        with get_connection() as con:
             cur = con.cursor()
             cur.execute(
                 "INSERT INTO card (id,suit,rank,value) VALUES(?, ?, ?, ?)",
@@ -195,14 +168,13 @@ class Card(BaseModel):
 class Hand(BaseModel):
     id: int
     name: str = 'Nueva Mano'
-    player_turn: Optional[str]
+    player_turn: Optional[str] # Al jugador que le toca tirar carta
+    player_hand: Optional[str] # El jugador que es mano
     current_round: int = 0
-    # table -> Cards played during the hand
 
     @classmethod
     def get_by_id(cls, hand_id: int):
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
+        con = get_connection()
 
         cur = con.cursor()
         cur.execute("SELECT * FROM hand WHERE id = ?", (hand_id,))
@@ -217,13 +189,12 @@ class Hand(BaseModel):
 
         return hand
 
-    @classmethod
-    def get_current_players(cls, hand_id: int) -> List[Player]:
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
+    def get_current_players(self) -> List[Player]:
+        """ Returns the current players of the hand """
+        con = get_connection()
 
         cur = con.cursor()
-        cur.execute("SELECT * FROM player WHERE playing_hand = ?", (hand_id,))
+        cur.execute("SELECT * FROM player WHERE playing_hand = ?", (self.id,))
 
         records = cur.fetchall()
 
@@ -232,10 +203,68 @@ class Hand(BaseModel):
 
         return players
 
+    def get_cards_dealed(self, player_id: str) -> List[Card]:
+        """ Gets the cards dealed to player """
+        con = get_connection()
+
+        cur = con.cursor()
+        cur.execute("SELECT * FROM playercard WHERE player_id = ?", (player_id,))
+
+        records = cur.fetchall()
+
+        cards = [Card.get_by_id(card[1]) for card in records]
+        con.close()
+
+        return cards
+
+    # TODO tendría que tener un método para resetear la mano/devolver 
+    # las cartas al mazo y limpiar las relaciones?
+    def deal_card_to_player(self, player_id: str, card_id: int) -> Card:
+        """ Insert card/player relation in current hand """
+        with get_connection() as con:
+            cur = con.cursor()
+            cur.execute(
+                "INSERT INTO playercard (player_id, card_id) VALUES(?, ?)",
+                (player_id, card_id)
+            )
+            con.commit()
+
+        return Card.get_by_id(card_id)
+
+
+    def play_card(self, player_id: str, card_id: int) -> Card:
+        """ Inserts the relation with the round table in sqlite """
+        with get_connection() as con:
+            cur = con.cursor()
+            cur.execute(
+                "INSERT INTO round (hand_id, card_id, player_id, round_number) VALUES(?, ?, ?, ?)",
+                (self.id, card_id, player_id, self.current_round)
+            )
+            con.commit()
+
+        return Card.get_by_id(card_id)
+
+    def get_card_played(self, player_id: str, round_number: int) -> Optional[Card]:
+        """ Gets the card played by player in an specific round of the hand """
+        con = get_connection()
+
+        cur = con.cursor()
+        cur.execute("SELECT card_id FROM round WHERE hand_id = ? AND player_id = ? AND round_number = ? ", (self.id, player_id, round_number))
+
+        record = cur.fetchone()
+
+        if record is None:
+            con.close()
+            return None
+
+        card = Card.get_by_id(record[0])
+        con.close()
+
+        return card
+
     @classmethod
     def get_all(cls) -> List[Hand]:
-        con = sqlite3.connect("db.sqlite3")
-        con.row_factory = sqlite3.Row
+        con = get_connection()
 
         cur = con.cursor()
         cur.execute("SELECT * FROM hand")
@@ -251,22 +280,22 @@ class Hand(BaseModel):
         return hands
 
     def update(self) -> Hand:
-        with sqlite3.connect("db.sqlite3") as con:
+        with get_connection() as con:
             cur = con.cursor()
             cur.execute(
-                "UPDATE hand SET name=?,player_turn=?,current_round=? WHERE hand_id = ?",
-                (self.name, self.player_turn, self.current_round, self.id)
+                "UPDATE hand SET name=?,player_turn=?,player_hand=?,current_round=? WHERE id = ?",
+                (self.name, self.player_turn, self.player_hand, self.current_round, self.id)
             )
             con.commit()
 
         return self
 
     def save(self) -> Hand:
-        with sqlite3.connect("db.sqlite3") as con:
+        with get_connection() as con:
             cur = con.cursor()
             cur.execute(
-                "INSERT INTO hand (id,name,player_turn,current_round) VALUES(?, ?, ?, ?)",
-                (self.id, self.name, self.player_turn, self.current_round)
+                "INSERT INTO hand (id,name,player_turn,player_hand,current_round) VALUES(?, ?, ?, ?, ?)",
+                (self.id, self.name, self.player_turn, self.player_hand, self.current_round)
             )
             con.commit()
 
