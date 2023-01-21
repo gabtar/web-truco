@@ -20,8 +20,10 @@ Juego de Truco Argentino usando websockets
 
 ### Frontend:
 - [ ] Mejorar estilos/colores css
-- [ ] Usar la context API de react para guardar estado de la partida/juego
-- [ ] React router o usar context para navegar entre páginas
+- [x] Usar la context API de react para guardar estado de la partida/juego
+- [x] React router o usar context para navegar entre páginas
+- [ ] Tipos en el reducer/generalizar acciones
+- [ ] Jugar la carta durante la partida y mostrar al oponente
 
 ### Otros:
 - [x] Dockerizar en algún momento

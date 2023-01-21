@@ -1,0 +1,8 @@
+.chat-window {
+    background-color: rgb(76, 90, 121);
+    padding: 1rem;
+    margin: 0% 10%;
+    border-radius: .3rem;
+    min-height: 11rem;
+    color: #FFF;
+}
