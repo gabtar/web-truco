@@ -18,10 +18,10 @@ class ConnectionManager(metaclass=Singleton):
     """ Handles real time connections via websockets """
     active_connections: dict[str, WebSocket] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket) -> str:
         """ Adds a new websocket connection """
         await websocket.accept()
-        player = Player().save()
+        player = Player()
         self.active_connections[player.id] = websocket
         await websocket.send_text(
                 json.dumps({"event": "connect", "playerId": player.id})

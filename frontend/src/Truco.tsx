@@ -5,8 +5,8 @@ import { TrucoContext } from './context';
 
 import Route from './components/Router/Route'
 import Link from './components/Router/Link'
-import GamesList from './components/GamesList';
-import Board from './components/Board';
+import GamesList from './components/GamesList/GamesList';
+import Board from './components/Board/Board';
 import Chat from './components/Chat/Chat';
 import './App.css'
 
@@ -59,7 +59,7 @@ function Truco() {
           <Chat />
           <div>
             <p>Lista de manos en juego</p>
-            <GamesList currentGames={state.currentGames} playerId={state.playerId} />
+            <GamesList />
           </div>
         </>
       </Route>
@@ -67,7 +67,7 @@ function Truco() {
       {/* EN PARTIDA */}
       {/* TODO más adelante, si esta jugando y abandola el path, hacerle un alert o algo que pierde ? */}
       <Route path="/game">
-        <Board playerId={state.playerId} cards={state.playerCards} handId={state.handId} />
+        <Board />
       </Route>
     </div>
   );

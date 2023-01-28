@@ -1,13 +1,12 @@
-import { createContext, useContext, ReactChild, ReactNode } from "react";
+import { createContext, useContext, ReactNode } from "react";
 
-const ws = new WebSocket("ws://localhost:80/ws");
+const ws = new WebSocket("ws://localhost/ws");
 
 // Context
 export const SocketContext = createContext(ws);
 
 interface ISocketProvider {
-  // TODO use ReactNode ?
-  children: ReactChild;
+  children: ReactNode;
 }
 
 export const SocketProvider = (props: ISocketProvider) => (

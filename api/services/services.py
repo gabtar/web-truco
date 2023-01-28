@@ -1,10 +1,9 @@
-import json
 import random
 
-from typing import Optional
-from fastapi import Depends
-from models.models import Player, Hand
-from services.connection_manager import ConnectionManager, dep_connection_manager
+from typing import List, Dict
+from models.models import Hand, Suit, Rank, Card
+# Games repository dependence
+from repositories.repository import AbstractHandRepository, dep_games_repository
 
 
 class GameException(Exception):
@@ -17,97 +16,106 @@ class GameException(Exception):
 
 class HandManager:
     """ Manages hands of Truco """
-    connection_manager: ConnectionManager
+    hands: AbstractHandRepository
 
-    def __init__(self, connection_manager: ConnectionManager = Depends(dep_connection_manager)):
-        self.connection_manager = connection_manager
+    def __init__(self, hands: AbstractHandRepository = dep_games_repository()):
+        self.hand_repository = hands
+        self.deck = [Card(suit=suit, rank=rank) for rank in Rank for suit in Suit]
 
-    async def deal_cards(self, hand_id: int, player_id: str):
+    def deal_cards(self, hand_id: int, player_id: str) -> Dict[str, List[Card]]:
         """ Deals cards for all players for an specific game/hand_id """
-        player = Player.get_by_id(player_id=player_id)
-        hand = Hand.get_by_id(hand_id=hand_id)
-        players = hand.get_current_players()
+        hand = self.hand_repository.get_by_id(id=hand_id)
 
-        if player.id != hand.player_hand or player not in players:
+        if player_id not in hand.players or player_id != hand.player_dealer:
             raise GameException('Acción inválida')
 
-        # TODO, más adelante cambiar esto para jugar de a 4 o 6
-        if len(hand.get_current_players()) < 2:
-            raise GameException('No hay suficientes jugadores')
+        cards = random.sample(range(40), len(hand.players) * 3)
 
-        card_ids = random.sample(range(1, 41), len(players) * 3)
-
-        for player in players:
-            cards_dealed = []
+        for player in hand.players:
             for i in range(3):
-                cards_dealed.append(hand.deal_card_to_player(player_id=player.id, card_id=card_ids.pop()))
+                hand.cards_dealed[player].append(self.deck[cards.pop()])
 
-            cards_list = [card.dict(include={'rank', 'suit'}) for card in cards_dealed]
-            message = json.dumps({"event": "receiveDealedCards", "cards": cards_list})
-            await self.connection_manager.send(json_string=message,player_id=player.id)
+        self.hand_repository.update(hand)
 
-    async def play_card(self, hand_id: int, player_id: str, card_id: int):
+        return hand.cards_dealed
+
+    def play_card(self, hand_id: int, player_id: str, rank: str, suit: str) -> Dict[str, List[Card]]:
         """ Performs a card play on a game """
-        hand = Hand.get_by_id(hand_id)
+        card = Card(suit=suit, rank=rank)
+        hand = self.hand_repository.get_by_id(id=hand_id)
 
-        if hand.get_card_played(player_id=player_id, round_number=hand.current_round) is not None:
-            raise GameException('Ya has jugado una carta')
+        if card not in hand.cards_dealed[player_id]:
+            raise GameException('No tienes ésa carta')
 
-        card = hand.play_card(player_id=player_id, card_id=card_id)
+        if hand.player_turn != player_id:
+            raise GameException('No es tu turno')
 
-        message = json.dumps({"event": "cardPlayed", "card": card.dict(include={'rank', 'suit'})})
+        # TODO, en realidad no sería necesario porque cuando juega la carta cambia
+        # de turno, y/o pasa al siguiente round
+        # if len(hand.cards_played[player_id]) > hand.current_round:
+        #     raise GameException('Ya has jugado una carta')
 
-        for player in hand.get_current_players():
-            await self.connection_manager.send(json_string=message, player_id=player.id)
+        # Juega la carta y la elimina de las cartas en mano
+        hand.cards_dealed[player_id].remove(card)
+        hand.cards_played[player_id].append(card)
 
-        # TODO si ya jugaron todos una carta pasar al siguiente round
-        # TODO, si la carta finaliza el round -> asignar score y reiniciar mano
-        # hand.current_round += 1
-        # hand.update()
+        # Dar Turno al siguiente jugador
+        round_finished = True
+        for player in hand.players:
+            if len(hand.cards_played[player]) < hand.current_round + 1:
+                hand.player_turn = player
+                round_finished = False
 
-    async def games_update(self, player_id: Optional[str] = None):
-        """ Updates the games list to all players connected in WebSocket """
-        # Debería ser get_avaliables_games() -> sólo aquellos que tienen lugares disponibles
-        # O tal vez poner un estado que sea EN_JUEGO, SIN_COMENZAR, FINALIZADO
-        games_list = Hand.get_all()
-        current_games = [game.dict(include={'id', 'name'}) for game in games_list]
-        games_update = json.dumps({"event": "gamesUpdate", "currentGames": current_games})
+        if round_finished:
+            hand.current_round += 1
+        self.hand_repository.update(hand)
 
-        if player_id:
-            await self.connection_manager.send(json_string=games_update, player_id=player_id)
-        else:
-            await self.connection_manager.broadcast(games_update)
+        # SHOULD I RETURN THE CARD PLAYED AND THE WITH THE ROUND NUMBER?
+        # OR THE CARDS IN MESA?
+        return hand.cards_played
 
-    async def join_hand(self, hand_id: int, player_id: str):
+    def avaliable_games(self) -> List[Hand]:
+        """ Returns the games avaliable to join """
+        return self.hand_repository.get_availables()
+
+    def join_hand(self, hand_id: int, player_id: str) -> None:
         """ Joins to an specific hand """
-        hand = Hand.get_by_id(hand_id=hand_id)
-        player = Player.get_by_id(player_id=player_id)
+        hand = self.hand_repository.get_by_id(id=hand_id)
 
-        if player.playing_hand is not None:
-            raise GameException('Ya estás en una partida')
-
-        if len(hand.get_current_players()) >= 2:
+        if len(hand.players) >= 2:
             raise GameException('Partida completa')
 
-        player.playing_hand = hand_id
-        player.update()
+        # Inicializa las variables del jugador en la mano
+        hand.cards_played[player_id] = []
+        hand.cards_dealed[player_id] = []
 
-        message = json.dumps({"event": "joinedHand", "handId": hand_id})
-        await self.connection_manager.send(json_string=message, player_id=player_id)
+        hand.players.append(player_id)
 
-    async def new_hand(self, player_id: str) -> int:
+        # If hand is complete, initialize the hand and set the dealer, hand, etc
+        if len(hand.players) == 2:
+            self.initialize_hand(hand_id=hand.id)
+
+        self.hand_repository.update(hand)
+
+    def initialize_hand(self, hand_id: int):
+        """ Sets the dealer, the player who is hand, and initialize hand variables """
+        hand = self.hand_repository.get_by_id(id=hand_id)
+
+        if len(hand.players) < 2:
+            raise GameException('No hay suficientes jugadores')
+
+        hand.player_dealer = hand.players[0]
+        for player in hand.players:
+            if player != hand.player_dealer:
+                hand.player_turn = player
+                hand.player_hand = player
+
+        hand.current_round = 0
+        self.hand_repository.update(hand)
+
+    def new_hand(self, player_id: str) -> int:
         """ Creates a new hand/game """
-        player = Player.get_by_id(player_id=player_id)
-
-        if player.playing_hand is not None:
-            raise GameException('Ya estás en una partida')
-
-        # TODO hacer el insert directamente con el autoincrement
-        hand = Hand(id=len(Hand.get_all())+1, player_hand=player_id).save()
-        player.playing_hand = hand.id
-        player.update()
-
-        message = json.dumps({"event": "joinedHand", "handId": hand.id})
-        await self.connection_manager.send(json_string=message, player_id=player_id)
+        hand = Hand()
+        self.hand_repository.save(hand)
 
         return hand.id

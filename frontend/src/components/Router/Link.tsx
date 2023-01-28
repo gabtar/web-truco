@@ -6,7 +6,7 @@ interface LinkProps {
   children: ReactNode
 }
 
-const Link = ({ className, href, children } : LinkProps) : any  => {
+const Link = ({ className, href, children } : LinkProps)  => {
   
   const onClick = (event: MouseEvent) : void => {
     // Prevent page reload

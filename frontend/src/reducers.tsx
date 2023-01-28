@@ -1,3 +1,4 @@
+import { Game } from './types'
 
 // TODO armar bien los tipos/interfaces de state y action
 // Habría que también agregarle los tipos a los eventos
@@ -10,17 +11,40 @@ export const socketReducer = (state: any, action: any) => {
     case 'message':
       // state stores the last 10 chat messages
       let current_messages = state.messages.length + 1 > 9 ? state.messages.slice(1,9) : state.messages;
-      return { ...state, messages: [...current_messages, action.message] };
+      return { ...state, messages: [...current_messages, action.payload.message] };
     case 'gamesUpdate':
-      return { ...state, currentGames: action.currentGames };
+      return { ...state, currentGames: action.payload.gamesList };
     case 'joinedHand':
       // TODO, When join a hand, show game interface eg set path -> "/game?id=2193979"
-      return { ...state, handId: action.handId };
+      window.history.pushState({}, "", "/game");
+
+      const navEvent = new PopStateEvent('popstate');
+      window.dispatchEvent(navEvent);
+
+      return { ...state,
+        game: { ...state.game, 
+          id: action.payload.handId,
+          name: action.payload.name,
+          currentPlayers: action.payload.currentPlayers
+        }
+      };
+    case 'newPlayerJoined':
+      // Recive el player ID que se unió
+      return {
+        ...state, 
+        game: { ...state.game,
+          currentPlayers: [...state.game.currentPlayers, action.payload.playerId]
+        }
+      };
     case 'receiveDealedCards':
-      return { ...state, playerCards: action.cards };
+      return { ...state, playerCards: action.payload.cards };
+    case 'cardPlayed':
+      let current_game: Game = state.game;
+      current_game.rounds[action.round].cardPlayed.set(action.player,action.card);
+
+      return { ...state, game: current_game }
     default:
       console.log("Evento de WebSocket sin atender aún!!!");
-      console.log(action);
       return { ...state }
       // throw new Error();
   }

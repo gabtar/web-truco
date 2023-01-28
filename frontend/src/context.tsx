@@ -1,13 +1,13 @@
-import React, { createContext, ReactNode, useReducer } from 'react';
-import { Game, Card } from './types'
+import React, { createContext, useReducer } from 'react';
+import { Game, Card, Message, Round } from './types'
 import { socketReducer } from './reducers'
 
 type initialStateType = {
   playerId: string,
-  messages: string[],
-  handId: number,
+  messages: Array<Message>,
   currentGames: Array<Game>,
   playerCards: Array<Card>,
+  game: Game
 }
 
 const emptyCard = {
@@ -15,15 +15,26 @@ const emptyCard = {
   rank: '#',
 } as Card;
 
+const emptyRound = (number: number) : Round => {
+  return {
+    roundNumber: number,
+    cardPlayed: new Map<string, Card>() 
+  }
+}
+
+const emptyGame = {
+  id: -1,
+  name: '',
+  currentPlayers: [],
+  rounds: [emptyRound(0), emptyRound(1), emptyRound(2)]
+}
+
 const initialState = {
   playerId: '',
-  // TODO, podría ser un array de mensajes de un length determinado por ej que guarde los últimos 20 mensajes del chat
   messages: [],
   currentGames: [],
-  // Puede ser un joinedGame/playingGame y el id del game/hand
-  // Habría que separar por loby, en partida, y extras
-  handId: -1,
   playerCards: [emptyCard, emptyCard, emptyCard],
+  game: emptyGame,
 }
 
 const TrucoContext = createContext<{

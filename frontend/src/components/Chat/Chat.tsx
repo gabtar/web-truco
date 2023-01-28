@@ -2,13 +2,15 @@ import { ReactNode } from 'react';
 import { useState, useContext } from 'react';
 import { useWebSocket } from '../../socket';
 import { TrucoContext } from '../../context';
+import { Message } from '../../types';
 import './Chat.css';
 
+
 // TODO en el mensaje agreagar la hora y el nombre del username?
-const displayMessages = (messages: string[]): ReactNode => {
-    return messages.map((message: string, index) => (
+const displayMessages = (messages: Message[]): ReactNode => {
+    return messages.map((message: Message, index) => (
     <div key={index}>
-        {message}
+        {message.time}({message.player}): {message.text}
     </div>)
     );
 };
@@ -20,7 +22,13 @@ function Chat() {
     const socket = useWebSocket();
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => setMessage(event.target.value);
-    const handleClick = () => socket.send(`{"event": "message", "message" : "${message}" }`);
+    // const handleClick = () => socket.send(`{"event": "message", "message" : "${message}", "playerId" : "${state.playerId}"}`);
+
+    const handleClick = () => socket.send(JSON.stringify({
+      event: "message",
+      payload: { playerId: state.playerId, message: message }
+    }));
+
 
     return (
         <div>

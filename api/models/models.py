@@ -1,26 +1,11 @@
 from __future__ import annotations
 import uuid
-import os
-import sqlite3
+import random
 
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Optional
-
-
-def get_connection():
-    """
-    Helper for database connection
-    If tests are running will return a connection to a test db
-    """
-    con = sqlite3.connect(os.getenv("TEST_DB", "db.sqlite3"))
-    con.row_factory = sqlite3.Row
-
-    return con
-
-
-class NotFound(Exception):
-    pass
+from typing import List, Optional, Dict
+from fastapi import Depends
 
 
 class Suit(str, Enum):
@@ -75,54 +60,17 @@ def get_value_of_card(rank: Rank, suit: Suit) -> int:
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Anónimo"
-    playing_hand: Optional[int]
-
-    @classmethod
-    def get_by_id(cls, player_id: str) -> Player:
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM player WHERE id = ?", (player_id,))
-
-        record = cur.fetchone()
-
-        if record is None:
-            raise NotFound
-
-        player = cls(**record)
-        con.close()
-
-        return player
-
-    def update(self) -> Player:
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "UPDATE player SET name=?,playing_hand=? WHERE id = ?",
-                (self.name, self.playing_hand, self.id)
-            )
-            con.commit()
-
-        return self
-
-    def save(self) -> Player:
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO player (id,name) VALUES(?, ?)",
-                (self.id, self.name)
-            )
-            con.commit()
-
-        return self
 
 
 class Card(BaseModel):
     """ A card in the game """
-    id: int
     suit: Suit
     rank: Rank
-    value: int
+    value: int = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.value = get_value_of_card(rank=self.rank, suit=self.suit)
 
     def __eq__(self, other) -> bool:
         """ Define equal cards """
@@ -136,167 +84,31 @@ class Card(BaseModel):
         """ Define if a card is higher than other """
         return self.value > other.value
 
-    @classmethod
-    def get_by_id(cls, id: int) -> Card:
-        con = get_connection()
 
-        cur = con.cursor()
-        cur.execute("SELECT * FROM card WHERE id = ?", (id,))
+class Truco(int, Enum):
+    """ Ranges of truco in a Hand """
+    TRUCO = 0
+    RETRUCO = 1
+    VALE_CUATRO = 2
 
-        record = cur.fetchone()
 
-        if record is None:
-            raise NotFound
-
-        card = cls(**record)
-        con.close()
-
-        return card
-
-    def save(self) -> Card:
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO card (id,suit,rank,value) VALUES(?, ?, ?, ?)",
-                (self.id, self.suit, self.rank, self.value)
-            )
-            con.commit()
-
-        return self
+class Envido(int, Enum):
+    """ Ranges of truco in a Hand """
+    NINGUNO = 0
+    ENVIDO = 1
+    REAL_ENVIDO = 2
+    FALTA_ENVIDO = 3
 
 
 class Hand(BaseModel):
-    id: int
+    id: Optional[int]  # TODO, debería autogenerarse por la db, persistencia
     name: str = 'Nueva Mano'
-    player_turn: Optional[str] # Al jugador que le toca tirar carta
-    player_hand: Optional[str] # El jugador que es mano
-    current_round: int = 0
-
-    @classmethod
-    def get_by_id(cls, hand_id: int):
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM hand WHERE id = ?", (hand_id,))
-
-        record = cur.fetchone()
-
-        if record is None:
-            raise NotFound
-
-        hand = cls(**record)
-        con.close()
-
-        return hand
-
-    def get_current_players(self) -> List[Player]:
-        """ Returns the current players of the hand """
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM player WHERE playing_hand = ?", (self.id,))
-
-        records = cur.fetchall()
-
-        players = [Player(**player) for player in records]
-        con.close()
-
-        return players
-
-    def get_cards_dealed(self, player_id: str) -> List[Card]:
-        """ Gets the cards dealed to player """
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM playercard WHERE player_id = ?", (player_id,))
-
-        records = cur.fetchall()
-
-        cards = [Card.get_by_id(card[1]) for card in records]
-        con.close()
-
-        return cards
-
-    # TODO tendría que tener un método para resetear la mano/devolver 
-    # las cartas al mazo y limpiar las relaciones?
-    def deal_card_to_player(self, player_id: str, card_id: int) -> Card:
-        """ Insert card/player relation in current hand """
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO playercard (player_id, card_id) VALUES(?, ?)",
-                (player_id, card_id)
-            )
-            con.commit()
-
-        return Card.get_by_id(card_id)
-
-
-    def play_card(self, player_id: str, card_id: int) -> Card:
-        """ Inserts the relation with the round table in sqlite """
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO round (hand_id, card_id, player_id, round_number) VALUES(?, ?, ?, ?)",
-                (self.id, card_id, player_id, self.current_round)
-            )
-            con.commit()
-
-        return Card.get_by_id(card_id)
-
-    def get_card_played(self, player_id: str, round_number: int) -> Optional[Card]:
-        """ Gets the card played by player in an specific round of the hand """
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT card_id FROM round WHERE hand_id = ? AND player_id = ? AND round_number = ? ", (self.id, player_id, round_number))
-
-        record = cur.fetchone()
-
-        if record is None:
-            con.close()
-            return None
-
-        card = Card.get_by_id(record[0])
-        con.close()
-
-        return card
-
-    @classmethod
-    def get_all(cls) -> List[Hand]:
-        con = get_connection()
-
-        cur = con.cursor()
-        cur.execute("SELECT * FROM hand")
-
-        records = cur.fetchall()
-
-        if records is None:
-            raise NotFound
-
-        hands = [cls(**hand) for hand in records]
-        con.close()
-
-        return hands
-
-    def update(self) -> Hand:
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "UPDATE hand SET name=?,player_turn=?,player_hand=?,current_round=? WHERE id = ?",
-                (self.name, self.player_turn, self.player_hand, self.current_round, self.id)
-            )
-            con.commit()
-
-        return self
-
-    def save(self) -> Hand:
-        with get_connection() as con:
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO hand (id,name,player_turn,player_hand,current_round) VALUES(?, ?, ?, ?, ?)",
-                (self.id, self.name, self.player_turn, self.player_hand, self.current_round)
-            )
-            con.commit()
-
-        return self
+    player_turn: Optional[str]  # Al jugador que le toca tirar carta
+    player_hand: Optional[str]  # El jugador que es mano
+    player_dealer: Optional[str]  # El que reparte la mano
+    current_round: Optional[int]
+    cards_dealed: Dict[str, List[Card]] = {}
+    cards_played: Dict[str, List[Card]] = {}
+    players: List[Player] = []
+    truco_status: Truco = Truco.TRUCO
+    envido: Envido = Envido.NINGUNO
