@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from models.models import Hand
 from services.connection_manager import dep_connection_manager
-from services.services import HandManager
+from services.services import HandManager, ScoreManager
 
 
 socketController = {}
@@ -11,6 +11,7 @@ socketController = {}
 # Required services for interacting with the events
 # Later try to pass by injection in events functions
 hand_manager = HandManager()
+score_manager = ScoreManager()
 
 
 def event(name):
@@ -140,7 +141,10 @@ async def deal_cards(playerId: str, handId: int):
         playerId (str): id of the player who wants to deal cards.
         handId (int): id of the hand to deal cards.
     """
+    # TODO cambiar por método directamente en el servicio
+    hand = hand_manager.hand_repository.get_by_id(id=handId)
     cards_dealed = hand_manager.deal_cards(hand_id=handId, player_id=playerId)
+    score_manager.initialize_score(hand=hand)
 
     for player, cards in cards_dealed.items():
         data = json.dumps({
@@ -153,6 +157,7 @@ async def deal_cards(playerId: str, handId: int):
 @event("playCard")
 async def play_card(playerId: str, handId: int, rank: str, suit: str):
     """ Plays a card in a hand
+    If the card played finish the hand, also notifies the result to all players
 
     Args:
         playerId (str): id of the player who is playing the card.
@@ -176,7 +181,17 @@ async def play_card(playerId: str, handId: int, rank: str, suit: str):
         "round": current_round
     })
 
-    # TODO, más adelante debería pasarle todo el update de la partida,
-    # si gana si finaliza o triggerar otros eventos?, etc
     for player in hand.players:
         await dep_connection_manager().send(json_string=data, player_id=player)
+
+    if score_manager.hand_winner(hand=hand) is not None:
+
+        score_manager.assign_score(hand=hand)
+
+        data = json.dumps({
+            "event": "handWinner",
+            "player": score_manager.hand_winner(hand),
+        })
+
+        for player in hand.players:
+            await dep_connection_manager().send(json_string=data, player_id=player)

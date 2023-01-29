@@ -2,14 +2,14 @@ import pytest
 import uuid
 
 from typing import List
-from models.in_memory_models import Hand
+from models.models import Hand
 from repositories.repository import InMemoryGamesRepository
 from services.services import HandManager, GameException
 # from unittest import mock
 
 
 @pytest.fixture()
-def fake_hands_repository() -> List[Hand]:
+def fake_hands_repository():
     return InMemoryGamesRepository()
 
 
@@ -244,5 +244,3 @@ def test_cannot_play_a_card_when_its_not_player_turn(
 
     assert 'No es tu turno' in str(excep)
     assert not hand.cards_played[player_dealer]
-
-

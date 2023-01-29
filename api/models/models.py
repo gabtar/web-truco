@@ -87,9 +87,10 @@ class Card(BaseModel):
 
 class Truco(int, Enum):
     """ Ranges of truco in a Hand """
-    TRUCO = 0
-    RETRUCO = 1
-    VALE_CUATRO = 2
+    NO_CANTADO = 1
+    TRUCO = 2
+    RETRUCO = 3
+    VALE_CUATRO = 4
 
 
 class Envido(int, Enum):
@@ -101,6 +102,7 @@ class Envido(int, Enum):
 
 
 class Hand(BaseModel):
+    """ A hand of truco """
     id: Optional[int]  # TODO, debería autogenerarse por la db, persistencia
     name: str = 'Nueva Mano'
     player_turn: Optional[str]  # Al jugador que le toca tirar carta
@@ -110,5 +112,12 @@ class Hand(BaseModel):
     cards_dealed: Dict[str, List[Card]] = {}
     cards_played: Dict[str, List[Card]] = {}
     players: List[Player] = []
-    truco_status: Truco = Truco.TRUCO
+    truco_status: Truco = Truco.NO_CANTADO
     envido: Envido = Envido.NINGUNO
+
+
+class Score(BaseModel):
+    """ Score of a truco game """
+    id: Optional[int]  # El id de la partida
+    # NOTA, Siempre van a ser 2 ya sea los jugadores o equipos
+    score: Optional[Dict[str, int]] # Por ahora queda con el id del jugador y puntaje

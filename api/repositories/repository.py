@@ -1,6 +1,6 @@
 import abc
-from typing import List
-from models.models import Hand
+from typing import List, Optional
+from models.models import Hand, Score
 
 
 class AbstractHandRepository(abc.ABC):
@@ -51,3 +51,45 @@ games_repository = InMemoryGamesRepository()
 # Singlenton for DI in services/managers
 def dep_games_repository():
     return games_repository
+
+
+class AbstractScoreRepository(abc.ABC):
+    @abc.abstractmethod
+    def get_by_id(self, id: int) -> Hand:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def save(self, hand: Hand) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def update(self, hand: Hand) -> None:
+        raise NotImplementedError
+
+
+class InMemoryScoreRepository(AbstractScoreRepository):
+    _scores: List[Score]
+
+    def __init__(self):
+        self._scores = []
+
+    def get_by_id(self, id: int) -> Optional[Score]:
+        for score in self._scores:
+            if score.id == id:
+                return score
+
+        return None
+
+    def save(self, score: Score) -> None:
+        self._scores.append(score)
+
+    def update(self, score: Score) -> None:
+        score_index = self._scores.index(self.get_by_id(id=score.id))
+        self._scores[score_index] = score
+
+
+scores_repository = InMemoryScoreRepository()
+
+
+def dep_scores_repository():
+    return scores_repository

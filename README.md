@@ -18,6 +18,7 @@ Juego de Truco Argentino usando websockets
 - [ ] Mejorar ui en partida/ cartas en mesa
   - [ ] Notificar de que usuario es el turno.
   - [ ] Deshabilitar botones cuando no es el turno/no puede repartir, etc.
+- [ ] Notificador de errores/acciones inválidas durante la partida.
 - [x] Usar la context API de react para guardar estado de la partida/juego
 - [x] React router o usar context para navegar entre páginas
 - [ ] Tipos en el reducer/generalizar acciones

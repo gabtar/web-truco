@@ -1,9 +1,12 @@
 import random
 
-from typing import List, Dict
-from models.models import Hand, Suit, Rank, Card
+from typing import List, Dict, Optional
+from models.models import Hand, Suit, Rank, Card, Score
 # Games repository dependence
-from repositories.repository import AbstractHandRepository, dep_games_repository
+from repositories.repository import (
+        AbstractHandRepository, dep_games_repository,
+        AbstractScoreRepository, dep_scores_repository
+)
 
 
 class GameException(Exception):
@@ -21,6 +24,10 @@ class HandManager:
     def __init__(self, hands: AbstractHandRepository = dep_games_repository()):
         self.hand_repository = hands
         self.deck = [Card(suit=suit, rank=rank) for rank in Rank for suit in Suit]
+
+    # TODO, get hand by id from repository
+    def get_hand(self, id: int):
+        pass
 
     def deal_cards(self, hand_id: int, player_id: str) -> Dict[str, List[Card]]:
         """ Deals cards for all players for an specific game/hand_id """
@@ -40,7 +47,11 @@ class HandManager:
         return hand.cards_dealed
 
     def play_card(self, hand_id: int, player_id: str, rank: str, suit: str) -> Dict[str, List[Card]]:
-        """ Performs a card play on a game """
+        """ Performs a card play on a game
+
+            Returns:
+                cards: Dict[str, List[Card]] the cards played on the hand
+        """
         card = Card(suit=suit, rank=rank)
         hand = self.hand_repository.get_by_id(id=hand_id)
 
@@ -70,8 +81,6 @@ class HandManager:
             hand.current_round += 1
         self.hand_repository.update(hand)
 
-        # SHOULD I RETURN THE CARD PLAYED AND THE WITH THE ROUND NUMBER?
-        # OR THE CARDS IN MESA?
         return hand.cards_played
 
     def avaliable_games(self) -> List[Hand]:
@@ -104,6 +113,7 @@ class HandManager:
         if len(hand.players) < 2:
             raise GameException('No hay suficientes jugadores')
 
+        # TODO, sorteo de la mano?
         hand.player_dealer = hand.players[0]
         for player in hand.players:
             if player != hand.player_dealer:
@@ -119,3 +129,70 @@ class HandManager:
         self.hand_repository.save(hand)
 
         return hand.id
+
+
+class ScoreManager:
+    """ Manages scores of hands of truco """
+    score_repository: AbstractScoreRepository
+
+    def __init__(self, score_repository: AbstractScoreRepository = dep_scores_repository()):
+        self.score_repository = score_repository
+
+    def initialize_score(self, hand: Hand):
+        score: Score = Score()
+        score.id = hand.id
+        score.score = {}
+        for player in hand.players:
+            score.score[player] = 0
+        self.score_repository.save(score)
+
+    def check_round_winner(self, hand: Hand, round_number: int) -> Optional[str]:
+        """ Determines the winner of a round
+
+        Returns: The (id: str) winner of the round or null if it's parda
+        """
+        # TODO, esto no va a funcionar para 4 o 6 jugadores
+        cards_played_p1 = hand.cards_played[hand.players[0]]
+        cards_played_p2 = hand.cards_played[hand.players[0]]
+
+        card_p1: Card = hand.cards_played[hand.players[0]][round_number] if len(cards_played_p1) > round_number else None
+        card_p2: Card = hand.cards_played[hand.players[1]][round_number] if len(cards_played_p2) > round_number else None
+
+        if card_p1 is None or card_p2 is None:
+            return None
+
+        if card_p1 == card_p2:
+            return None
+        elif card_p1 > card_p2:
+            return hand.players[0]
+        elif card_p1 < card_p2:
+            return hand.players[1]
+
+    def hand_winner(self, hand: Hand) -> Optional[str]:
+        """ Determines the winner of a hand """
+        rounds_winned = [0, 0]  # Stores the rounds winned by each player
+
+        # TODO ver de usar un iterador sobre las cartas en mesa
+        for round in range(3):
+            round_winner = self.check_round_winner(hand=hand, round_number=round)
+
+            if round_winner is None:
+                continue
+
+            if round_winner == hand.players[0]:
+                rounds_winned[0] += 1
+            else:
+                rounds_winned[1] += 1
+
+        # Verificar si alguno ganó 2 rounds
+        if 2 in rounds_winned:
+            return hand.players[rounds_winned.index(max(rounds_winned))]
+
+        return None
+
+    def assign_score(self, hand: Hand):
+        """ Assigns the score the the passed hand """
+        score: Score = self.score_repository.get_by_id(id=hand.id)
+        score.score[self.hand_winner(hand=hand)] += 1 * hand.truco_status
+
+        self.score_repository.update(score)
