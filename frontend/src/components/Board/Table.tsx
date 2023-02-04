@@ -13,15 +13,16 @@ function Table() {
     );
 
     {/* TODO, mostrar nombre del jugador, badge con turno, si es mano, etc */}
-    const cardsPlayed = game.players.map((player) =>
-          <div key={player.id} className="card-container">
+    const cardsPlayed = game.players.map((user) =>
+          <div key={user.id} className="card-container">
             <>
               <div>
-                <p>👤 {player.name}</p>
-                <div className="badge">Es Mano</div>
-                <div className="badge">Turno</div>
+                <p>👤 {user.name} { user.id === player.id ? <b>(Tú)</b> : ''}</p>
+                {game.player_hand === user.id ? <div className="badge">✋Mano</div> : ''}
+                {game.player_dealer === user.id ? <div className="badge">🂠 Repartidor</div> : ''}
+                {game.player_turn === user.id ? <div className="badge">Turno</div> : ''}
               </div>
-              {cardsPlayedByPlayer(player.id)}
+              {cardsPlayedByPlayer(user.id)}
             </>
           </div>
     );

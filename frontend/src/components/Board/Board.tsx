@@ -45,7 +45,7 @@ function Board() {
         {cardsDealed}
        </div>
        <div>
-        <button onClick={handleDealCards} className="btn">Repartir Mano</button>
+        {player.id == game.player_dealer ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : '' }
         <button className="btn">Cantar Envido</button>
         <button className="btn">Cantar Truco</button>
         <button className="btn">Cantar Flor</button>

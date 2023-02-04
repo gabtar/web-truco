@@ -8,7 +8,7 @@ Juego de Truco Argentino usando websockets
 - [x] Desacople de los modelos básicos de dominio de la base de datos
 - [ ] Agregar score de la mano (En proceso)
 - [x] Agregar un servicio/manager para crear/buscar/borrar jugadores
-- [ ] Mejorar el socketController
+- [x] Mejorar el socketController
 - [ ] Tests a los eventos del websocket/socketControler que devuelva los json
 - [ ] Agregar envido
 - [ ] Agregar niveles de truco
@@ -16,8 +16,8 @@ Juego de Truco Argentino usando websockets
 ### Frontend:
 - [x] Mejorar estilos/colores css
 - [x] Mejorar ui en partida/ cartas en mesa
-  - [ ] Notificar de que usuario es el turno.
-  - [ ] Deshabilitar botones cuando no es el turno/no puede repartir, etc.
+  - [x] Notificar de que usuario es el turno.
+  - [x] Deshabilitar botones cuando no es el turno/no puede repartir, etc.
 - [x] Notificador de errores/acciones inválidas durante la partida.
 - [x] Usar la context API de react para guardar estado de la partida/juego
 - [x] React router o usar context para navegar entre páginas

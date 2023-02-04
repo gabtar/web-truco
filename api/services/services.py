@@ -36,15 +36,14 @@ class PlayerManager:
 
 class HandManager:
     """ Manages hands of Truco """
-    hands: AbstractHandRepository
+    hand_repository: AbstractHandRepository
 
     def __init__(self, hands: AbstractHandRepository = dep_games_repository()):
         self.hand_repository = hands
         self.deck = [Card(suit=suit, rank=rank) for rank in Rank for suit in Suit]
 
-    # TODO, get hand by id from repository
     def get_hand(self, id: int):
-        pass
+        return self.hand_repository.get_by_id(id=id)
 
     def deal_cards(self, hand_id: int, player_id: str) -> Dict[str, List[Card]]:
         """ Deals cards for all players for an specific game/hand_id """

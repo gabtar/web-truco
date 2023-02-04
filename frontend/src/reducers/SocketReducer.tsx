@@ -23,7 +23,9 @@ export const trucoReducer = (state: any, action: any) => {
         game: { ...state.game, 
           id: payload.handId,
           name: payload.name,
-          players: payload.currentPlayers
+          players: payload.currentPlayers,
+          player_hand: payload.playerHand,
+          player_dealer: payload.playerDealer
         }
       };
     case 'newPlayerJoined':
@@ -37,7 +39,9 @@ export const trucoReducer = (state: any, action: any) => {
     case 'receiveDealedCards':
       return { ...state,
         game: { ...state.game,
-          cards_dealed: payload.cards
+          cards_dealed: payload.cards,
+          player_turn: payload.playerTurn,
+          player_hand: payload.playerHand,
         }
       };
     case 'cardPlayed':
@@ -48,7 +52,8 @@ export const trucoReducer = (state: any, action: any) => {
 
       return { ...state,
         game: { ...state.game,
-          cards_played: cards_played
+          cards_played: cards_played,
+          player_turn: payload.playerTurn,
         }
       };
     default:
