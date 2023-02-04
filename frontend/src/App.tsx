@@ -1,15 +1,18 @@
-import { SocketProvider } from './socket'
-import { TrucoProvider } from './context'
+import { SocketProvider } from './contexts/SocketContext';
+import { TrucoProvider } from './contexts/TrucoContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Truco from './Truco';
 
 
 function App() {
   return (
-    <TrucoProvider>
-      <SocketProvider>
-        <Truco />
-      </SocketProvider>
-    </TrucoProvider>
+    <NotificationProvider>
+      <TrucoProvider>
+        <SocketProvider>
+          <Truco />
+        </SocketProvider>
+      </TrucoProvider>
+    </NotificationProvider>
   );
 }
 

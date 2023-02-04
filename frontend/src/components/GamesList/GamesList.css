@@ -1,18 +1,32 @@
-table {
-  border-collapse: collapse; 
-  background:white;
+.games-list-table {
+  border-collapse: collapse;
+  margin: 25px 0;
+  font-size: 0.9em;
+  font-family: sans-serif;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.99);
+  border-radius: .5rem;
+  background-color: var(--blue);
+}
+
+.games-list-table thead tr {
   text-align: center;
-  border-radius:6px;
-  margin: 1rem 10%;
-  width: 80%;
 }
 
-.thead {
-  background-color: #666;
-  padding: 1rem;
+.games-list-table th,
+.games-list-table td {
+    padding: 6px 15px;
 }
 
-.trow {
-  background-color: #aaa;
-  padding: 1rem;
+.games-list-table tbody tr:nth-of-type(odd) {
+  background-color: var(--bg-dark);
+}
+
+.games-list-table tbody tr:nth-of-type(even) {
+  background-color: #222;
+}
+
+.empty-games-list {
+  background-color: var(--yellow);
+  opacity: 0.8;
 }

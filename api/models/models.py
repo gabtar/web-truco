@@ -76,6 +76,10 @@ class Card(BaseModel):
         """ Define equal cards """
         return self.value == other.value
 
+    def __hash__(self):
+        """ Define objects equality """
+        return hash(self.suit+self.rank)
+
     def __lt__(self, other) -> bool:
         """ Define if a card is lower than other """
         return self.value < other.value
@@ -120,4 +124,4 @@ class Score(BaseModel):
     """ Score of a truco game """
     id: Optional[int]  # El id de la partida
     # NOTA, Siempre van a ser 2 ya sea los jugadores o equipos
-    score: Optional[Dict[str, int]] # Por ahora queda con el id del jugador y puntaje
+    score: Optional[Dict[str, int]] = {} # Por ahora queda con el id del jugador y puntaje

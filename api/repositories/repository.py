@@ -1,6 +1,48 @@
 import abc
 from typing import List, Optional
-from models.models import Hand, Score
+from models.models import Hand, Score, Player
+
+
+class AbstractPlayerRepository(abc.ABC):
+    @abc.abstractmethod
+    def get_by_id(self, id: int) -> Optional[Player]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def save(self, player: Player) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def update(self, player: Player) -> None:
+        raise NotImplementedError
+
+
+class InMemoryPlayersRepository(AbstractPlayerRepository):
+    _players: List[Player]
+
+    def __init__(self):
+        self._players = []
+
+    def get_by_id(self, id) -> Optional[Player]:
+        for player in self._players:
+            if player.id == id:
+                return player
+        return None
+
+    def save(self, player: Player) -> None:
+        self._players.append(player)
+
+    def update(self, player: Player) -> None:
+        # Obtengo el index del jugador en el array
+        # lo reeemplazo
+        pass
+
+
+players_repository = InMemoryPlayersRepository()
+
+
+def dep_players_repository() -> InMemoryPlayersRepository:
+    return players_repository
 
 
 class AbstractHandRepository(abc.ABC):

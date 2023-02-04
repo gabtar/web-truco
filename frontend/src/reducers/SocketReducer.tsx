@@ -1,19 +1,17 @@
-import { Game } from './types'
+import { Card } from '../types';
 
-// TODO armar bien los tipos/interfaces de state y action
-// Habría que también agregarle los tipos a los eventos
-// Se podría separar en GameReducer(eventos durante partida) y 
-// OtrosReducer(buscar mejor nombre) para eventos chat, crear juego, etc
-export const socketReducer = (state: any, action: any) => {
-  switch (action.event) {
+export const trucoReducer = (state: any, action: any) => {
+  const { event, payload } = action;
+
+  switch (event) {
     case 'connect':
-      return { ...state, playerId: action.playerId };
+      return { ...state, player: payload.player };
     case 'message':
       // state stores the last 10 chat messages
       let current_messages = state.messages.length + 1 > 9 ? state.messages.slice(1,9) : state.messages;
-      return { ...state, messages: [...current_messages, action.payload.message] };
+      return { ...state, messages: [...current_messages, payload.message] };
     case 'gamesUpdate':
-      return { ...state, currentGames: action.payload.gamesList };
+      return { ...state, currentGames: payload.gamesList };
     case 'joinedHand':
       // TODO, When join a hand, show game interface eg set path -> "/game?id=2193979"
       window.history.pushState({}, "", "/game");
@@ -23,9 +21,9 @@ export const socketReducer = (state: any, action: any) => {
 
       return { ...state,
         game: { ...state.game, 
-          id: action.payload.handId,
-          name: action.payload.name,
-          currentPlayers: action.payload.currentPlayers
+          id: payload.handId,
+          name: payload.name,
+          players: payload.currentPlayers
         }
       };
     case 'newPlayerJoined':
@@ -33,16 +31,26 @@ export const socketReducer = (state: any, action: any) => {
       return {
         ...state, 
         game: { ...state.game,
-          currentPlayers: [...state.game.currentPlayers, action.payload.playerId]
+          players: [...state.game.players, payload.player]
         }
       };
     case 'receiveDealedCards':
-      return { ...state, playerCards: action.payload.cards };
+      return { ...state,
+        game: { ...state.game,
+          cards_dealed: payload.cards
+        }
+      };
     case 'cardPlayed':
-      let current_game: Game = state.game;
-      current_game.rounds[action.round].cardPlayed.set(action.player,action.card);
+      const cards_played = new Map<string, Card>();
+      for (const key in payload.cardsPlayed) {
+        cards_played.set(key, payload.cardsPlayed[key]);
+      }
 
-      return { ...state, game: current_game }
+      return { ...state,
+        game: { ...state.game,
+          cards_played: cards_played
+        }
+      };
     default:
       console.log("Evento de WebSocket sin atender aún!!!");
       return { ...state }

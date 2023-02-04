@@ -1,11 +1,12 @@
 import random
 
 from typing import List, Dict, Optional
-from models.models import Hand, Suit, Rank, Card, Score
+from models.models import Hand, Suit, Rank, Card, Score, Player
 # Games repository dependence
 from repositories.repository import (
         AbstractHandRepository, dep_games_repository,
-        AbstractScoreRepository, dep_scores_repository
+        AbstractScoreRepository, dep_scores_repository,
+        AbstractPlayerRepository, dep_players_repository
 )
 
 
@@ -15,6 +16,22 @@ class GameException(Exception):
 
     def __str__(self):
         return str(self.message)
+
+
+class PlayerManager:
+    """ Manages players of the game """
+    players_repository: AbstractPlayerRepository
+
+    def __init__(self, players_repository: AbstractPlayerRepository = dep_players_repository()):
+        self.players_repository = players_repository
+
+    def create(self) -> Player:
+        player = Player()
+        self.players_repository.save(player)
+        return player
+
+    def find_player(self, player_id: str) -> Optional[Player]:
+        return self.players_repository.get_by_id(id=player_id)
 
 
 class HandManager:
@@ -60,11 +77,6 @@ class HandManager:
 
         if hand.player_turn != player_id:
             raise GameException('No es tu turno')
-
-        # TODO, en realidad no sería necesario porque cuando juega la carta cambia
-        # de turno, y/o pasa al siguiente round
-        # if len(hand.cards_played[player_id]) > hand.current_round:
-        #     raise GameException('Ya has jugado una carta')
 
         # Juega la carta y la elimina de las cartas en mano
         hand.cards_dealed[player_id].remove(card)
@@ -141,7 +153,6 @@ class ScoreManager:
     def initialize_score(self, hand: Hand):
         score: Score = Score()
         score.id = hand.id
-        score.score = {}
         for player in hand.players:
             score.score[player] = 0
         self.score_repository.save(score)
@@ -171,13 +182,12 @@ class ScoreManager:
     def hand_winner(self, hand: Hand) -> Optional[str]:
         """ Determines the winner of a hand """
         rounds_winned = [0, 0]  # Stores the rounds winned by each player
+        completed_rounds = min([len(cards) for cards in hand.cards_played.values()])
 
         # TODO ver de usar un iterador sobre las cartas en mesa
-        for round in range(3):
+        # Itera sobre la menor cantidad de rounds completos
+        for round in range(completed_rounds):
             round_winner = self.check_round_winner(hand=hand, round_number=round)
-
-            if round_winner is None:
-                continue
 
             if round_winner == hand.players[0]:
                 rounds_winned[0] += 1

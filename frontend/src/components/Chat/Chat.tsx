@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useState, useContext } from 'react';
-import { useWebSocket } from '../../socket';
-import { TrucoContext } from '../../context';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { TrucoContext } from '../../contexts/TrucoContext';
 import { Message } from '../../types';
 import './Chat.css';
 
@@ -22,23 +22,22 @@ function Chat() {
     const socket = useWebSocket();
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => setMessage(event.target.value);
-    // const handleClick = () => socket.send(`{"event": "message", "message" : "${message}", "playerId" : "${state.playerId}"}`);
 
     const handleClick = () => socket.send(JSON.stringify({
       event: "message",
-      payload: { playerId: state.playerId, message: message }
+      payload: { playerId: state.player.id, message: message }
     }));
 
-
     return (
-        <div>
+        <div className="right-column">
             <h2>Chat</h2>
             <div className="chat-window">
                 {displayMessages(state.messages)}
             </div>
-            <p>Enviar mensaje</p>
-            <input type="text" onChange={handleChange} />
-            <input type="button" className="btn" onClick={handleClick} value='Enviar' />
+            <div>
+              <input type="text" onChange={handleChange} placeholder="Enviar mensaje..." />
+              <input type="button" className="btn" onClick={handleClick} value='Enviar' />
+            </div>
         </div>
     );
 }

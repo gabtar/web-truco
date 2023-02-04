@@ -24,9 +24,16 @@ async def websocket_endpoint_new(
             try:
                 await socketController[data['event']](**data['payload'])
             except (Exception) as e:
-                message = json.dumps({"event": "error", "message": str(e)})
-                print("ERROR: ", message)
-                await manager.send(json_string=message, player_id=data['payload']['playerId'])
+                # Notificación del error
+                error_message = json.dumps({
+                        'event': 'error',
+                        'payload': {
+                            'title': 'Error',
+                            'text': str(e)
+                        }
+                })
+                print("ERROR: ", data)
+                await manager.send(json_string=error_message, player_id=data['payload']['playerId'])
 
     except WebSocketDisconnect:
         # TODO end the game, set a winner if user was playing a game

@@ -1,22 +1,22 @@
 import { useContext } from 'react';
-import { TrucoContext } from '../../context';
-import { useWebSocket } from '../../socket';
+import { TrucoContext } from '../../contexts/TrucoContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import { Game } from '../../types';
 import './GamesList.css';
 
 function GamesList() {
   const socket = useWebSocket();
   const { state } = useContext(TrucoContext);
-  const { playerId, currentGames } = state;
+  const { player, currentGames } = state;
 
   const handleCreateNewGame = () => socket.send(JSON.stringify({
     event: "createNewGame",
-    payload: { playerId: playerId }
+    payload: { playerId: player.id }
   }));
 
   const handleJoinGame = (handId: number) => socket.send(JSON.stringify({
     event: "joinGame",
-    payload: { playerId: playerId, handId: handId }
+    payload: { playerId: player.id, handId: handId }
   }));
 
   const gamesListRows = currentGames.map((game: Game) => 
@@ -29,9 +29,12 @@ function GamesList() {
       </tr>
   );
 
+  const emptyGamesList = <tr className="empty-games-list"><td colSpan={3}>No hay partidas</td></tr>;
+
   return (
-    <>
-      <table>
+    <div className="left-column">
+      <h2>Partidas en juego</h2>
+      <table className="games-list-table">
         <thead>
           <tr>
             <th className="thead">Nombre Partida</th>
@@ -40,11 +43,11 @@ function GamesList() {
           </tr>
         </thead>
         <tbody>
-          {gamesListRows}
+          {currentGames.length === 0 ? emptyGamesList : gamesListRows}
         </tbody>
       </table>
       <input type="button" className="btn" value="Crear partida" onClick={handleCreateNewGame} />
-    </>
+    </div>
   )
   
 }

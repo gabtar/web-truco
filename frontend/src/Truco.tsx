@@ -1,35 +1,43 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react'
+import { useEffect, useCallback, useContext } from 'react';
 
-import { useWebSocket } from './socket';
-import { TrucoContext } from './context';
+import { useWebSocket } from './hooks/useWebSocket';
+import { useNotification } from './hooks/useNotification';
+
+import { TrucoContext } from './contexts/TrucoContext';
+
+import { Notification } from './types';
 
 import Route from './components/Router/Route'
-import Link from './components/Router/Link'
+import NotificationAlert from './components/NotificationAlert/NotificationAlert';
 import GamesList from './components/GamesList/GamesList';
 import Board from './components/Board/Board';
 import Chat from './components/Chat/Chat';
+import NavBar from './components/NavBar/NavBar';
 import './App.css'
 
 
 function Truco() {
+  const { notifications, addNotification } = useNotification();
 
   const socket = useWebSocket();
 
-  const { state, dispatch } = useContext(TrucoContext);
-
-  const [message, setMessage] = useState('');
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => setMessage(event.target.value);
-  const handleClick = () => socket.send(`{"event": "message", "message" : "${message}" }`);
+  const { dispatch } = useContext(TrucoContext);
 
   const onSocketEvent = useCallback(
     (message: any) => {
-      const data = JSON.parse(JSON.stringify(message?.data));
-      // TODO, delete, just to check message sended via socket
-      console.log(JSON.parse(message?.data));
+      const data = JSON.parse(message?.data);
+      // TODO, delete, just to check the message sent via socket
+      console.log("SOCKET: ",JSON.parse(message?.data));
 
-      dispatch(JSON.parse(data));
-    }, [],
+      // Notify errors
+      if (data.event === 'error') {
+        const { title, text } = data.payload
+        addNotification(title, text);
+        return;
+      }
+
+      dispatch(data);
+    }, [dispatch, addNotification],
   );
 
   useEffect(() => {
@@ -42,26 +50,22 @@ function Truco() {
 
   return (
     <div style={{ textAlign: "center" }}>
-      <div>
-        Menu:
-        <Link href="/">| Home |</Link>
-        <Link href="/game"> Partida |</Link>
-      </div>
-
-      <div>
-        <h1> Web Socket Truco </h1>
-        <p>Id: {state.playerId}</p>
-      </div>
+      <NavBar />
+      {notifications.map((notification: Notification) => 
+        <NotificationAlert 
+          key={notification.id}
+          id={notification.id}
+          title={notification.title} 
+          message={notification.message}
+          />
+      )}
 
       {/* MAIN PAGE/LOBBY/CHAT */}
       <Route path="/">
-        <>
-          <Chat />
-          <div>
-            <p>Lista de manos en juego</p>
-            <GamesList />
+          <div className="container">
+              <GamesList />
+              <Chat />
           </div>
-        </>
       </Route>
 
       {/* EN PARTIDA */}

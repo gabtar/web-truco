@@ -1,17 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Eczar:wght@400;700;800&family=Signika+Negative:wght@300;400;700&display=swap');
+
+:root {
+  /* Color pallete */
+  --blue: #354F5C;
+  --green: #8DB160;
+  --yellow: #F0CB4D;
+  --light-yellow: #E7A650;
+  --red: #BD3D39;
+  --bg-dark: #1b1d21;
+  --bg-light: #FFF;
+  --font-titles: 'Eczar', serif;
+  --font-text: 'Signika Negative', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    font-family: var(--font-text);
+    color: #FFF;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-titles);
+  font-weight: bold;
+}
+
 .btn {
   display: inline-block;
   outline: 0;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: .2rem;
   font-size: .8rem;
   height: 2rem;
-  background-color: #34343433;
-  color: #181818;
+  background-color: var(--blue);
+  color: #FFF;
   padding: 0 1.2rem;
 }
 .btn:hover {
-  background-color: #00000033;
-  transform: scale(1.02);
+  background-color: var(--green);
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.container > .left-column {
+  flex-grow: 4;
+}
+
+.container > div {
+  padding: 1rem;
+  flex-grow: 1;
 }

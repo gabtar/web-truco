@@ -1,8 +1,9 @@
 import json
 from datetime import datetime
-from models.models import Hand
+from typing import List
+from models.models import Hand, Player
 from services.connection_manager import dep_connection_manager
-from services.services import HandManager, ScoreManager
+from services.services import HandManager, ScoreManager, PlayerManager
 
 
 socketController = {}
@@ -10,8 +11,9 @@ socketController = {}
 
 # Required services for interacting with the events
 # Later try to pass by injection in events functions
-hand_manager = HandManager()
-score_manager = ScoreManager()
+hand_manager: HandManager = HandManager()
+player_manager: PlayerManager = PlayerManager()
+score_manager: ScoreManager = ScoreManager()
 
 
 def event(name):
@@ -61,15 +63,17 @@ async def new_player_joined(handId: int, playerId: str):
         playerId (str): the id of the player who joined the hand.
         handId: (int): the id of the hand to notify the rest of the players.
     """
-    # Tendría que pedirle los jugadores asociados a la mano al servicio
     hand = hand_manager.hand_repository.get_by_id(id=handId)
+    player = player_manager.find_player(player_id=playerId)
     for player_id in hand.players:
+        # Don't send the message to the player who joined
+        # Because he already receives the updated game
         if player_id == playerId:
             continue
 
         message = json.dumps({
             "event": "newPlayerJoined",
-            "payload": {"playerId": playerId}}
+            "payload": {"player": {"id": player.id, "name": player.name}}}
         )
         await dep_connection_manager().send(json_string=message, player_id=player_id)
 
@@ -85,11 +89,13 @@ async def send_message(playerId: str, message: str):
         playerId (str): the id of the player who sent the message.
         message (str): the text of the message sent by the player.
     """
+    player: Player = player_manager.find_player(player_id=playerId)
+
     data = json.dumps({
         "event": "message",
         "payload": {"message": {
             "text": message,
-            "player": playerId,
+            "player": player.name,
             "time": str(datetime.now().strftime("%H:%M:%S"))
             }
         }
@@ -106,13 +112,17 @@ async def join_hand(handId: int, playerId: str):
         handId (int): the id of the hand to add a new player.
     """
     hand_manager.join_hand(hand_id=handId, player_id=playerId)
+    # TODO cambiar por método directamente en el servicio
     hand: Hand = hand_manager.hand_repository.get_by_id(id=handId)
 
+    game_players = [player_manager.find_player(player_id=player_id).dict() for player_id in hand.players]
+
+    # TODO change to send json schema of the full game status
     data = json.dumps({
             'event': 'joinedHand',
             'payload': {'handId': handId,
                         'name': hand.name,
-                        'currentPlayers': hand.players}
+                        'currentPlayers': game_players}
     })
     await dep_connection_manager().send(json_string=data, player_id=playerId)
     await new_player_joined(handId=handId, playerId=playerId)
@@ -166,7 +176,6 @@ async def play_card(playerId: str, handId: int, rank: str, suit: str):
         rank (str): the rank of the card to be played.
     """
     hand = hand_manager.hand_repository.get_by_id(id=handId)
-    current_round = hand.current_round
 
     cards_played = hand_manager.play_card(hand_id=handId,
                                           player_id=playerId,
@@ -174,11 +183,18 @@ async def play_card(playerId: str, handId: int, rank: str, suit: str):
                                           suit=suit
                                           )
 
+    cards = {}
+    for player in cards_played.keys():
+        cards[player] = [card.dict(include={'suit', 'rank'}) for card in cards_played[player]]
+
     data = json.dumps({
         "event": "cardPlayed",
-        "card": {"suit": suit, "rank": rank},
-        "player": playerId,
-        "round": current_round
+        "payload": {
+            "cardsPlayed": cards
+            # "card": {"suit": suit, "rank": rank},
+            # "player": playerId,
+            # "round": current_round
+        }
     })
 
     for player in hand.players:

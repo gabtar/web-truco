@@ -1,7 +1,8 @@
 import json
 
 from fastapi import WebSocket
-from models.models import Player
+from services.services import PlayerManager
+from repositories.repository import dep_players_repository
 
 
 class Singleton(type):
@@ -17,14 +18,19 @@ class Singleton(type):
 class ConnectionManager(metaclass=Singleton):
     """ Handles real time connections via websockets """
     active_connections: dict[str, WebSocket] = {}
+    player_service: PlayerManager = PlayerManager(dep_players_repository())
 
     async def connect(self, websocket: WebSocket) -> str:
         """ Adds a new websocket connection """
         await websocket.accept()
-        player = Player()
+        player = self.player_service.create()
         self.active_connections[player.id] = websocket
         await websocket.send_text(
-                json.dumps({"event": "connect", "playerId": player.id})
+                json.dumps({"event": "connect",
+                            "payload": {
+                                "player": {"id": player.id, "name": player.name}
+                                }
+                            })
             )
         return player.id
 

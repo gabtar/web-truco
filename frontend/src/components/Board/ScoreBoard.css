@@ -1,0 +1,26 @@
+.score-table {
+  background-color: var(--yellow);
+  text-align: center;
+  box-shadow: 5px 5px 0px var(--blue);
+  border-collapse: collapse;
+  border-radius: .5rem;
+  color: var(--bg-dark);
+  margin: auto;
+}
+
+.score-table thead {
+  border-bottom: 5px solid var(--red);
+}
+
+.score-table thead tr td,
+.score-table tbody tr td{
+  padding: 1rem;
+}
+
+.score-table tbody tr td{
+  font-size: 2rem;
+}
+
+.score-table tbody tr td:first-child {
+  border-right: 5px solid var(--red);
+}
