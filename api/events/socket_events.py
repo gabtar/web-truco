@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Dict
 from models.models import Hand, Player
-from services.connection_manager import dep_connection_manager
+from services.connection_manager import dep_connection_manager, ConnectionManager
 from services.services import HandManager, ScoreManager, PlayerManager
 
 
@@ -26,22 +26,18 @@ class SocketController:
         return self._events[event](**payload)
 
 
-# Inject all services dependencies!
 socket = SocketController()
-
-
-# Required services for interacting with the events
-# Later try to pass by injection in events functions
-hand_manager: HandManager = HandManager()
-player_manager: PlayerManager = PlayerManager()
-score_manager: ScoreManager = ScoreManager()
 
 
 # ----------------------------------------------------------------------------
 # Server to client events
 # ----------------------------------------------------------------------------
 @socket.event("gamesUpdate")
-async def games_update(playerId: str = None):
+async def games_update(
+        playerId: str = None,
+        connection_manager: ConnectionManager = dep_connection_manager(),
+        hand_manager: HandManager = HandManager()
+        ):
     """ Sends an update of the current games avaliables in the server.
 
     If an optional player_id argument is passed it only sends the message
@@ -61,9 +57,9 @@ async def games_update(playerId: str = None):
     })
 
     if playerId is not None:
-        await dep_connection_manager().send(json_string=message, player_id=playerId)
+        await connection_manager.send(json_string=message, player_id=playerId)
     else:
-        await dep_connection_manager().broadcast(json_string=message)
+        await connection_manager.broadcast(json_string=message)
 
 
 # @socket.event("newPlayerJoined")
@@ -95,7 +91,12 @@ async def games_update(playerId: str = None):
 # Client to server events with server to client responses
 # ----------------------------------------------------------------------------
 @socket.event("message")
-async def send_message(playerId: str, message: str):
+async def send_message(
+        playerId: str,
+        message: str,
+        connection_manager: ConnectionManager = dep_connection_manager(),
+        player_manager: PlayerManager = PlayerManager()
+        ):
     """ Receives a message from a player and re sends it to all users connected
 
     Args:
@@ -113,11 +114,17 @@ async def send_message(playerId: str, message: str):
             }
         }
     })
-    await dep_connection_manager().broadcast(data)
+    await connection_manager.broadcast(json_string=data)
 
 
 @socket.event("joinGame")
-async def join_hand(handId: int, playerId: str):
+async def join_hand(
+        handId: int,
+        playerId: str,
+        connection_manager: ConnectionManager = dep_connection_manager(),
+        player_manager: PlayerManager = PlayerManager(),
+        hand_manager: HandManager = HandManager()
+        ):
     """ Joins a player to a hand
 
     Args:
@@ -125,8 +132,8 @@ async def join_hand(handId: int, playerId: str):
         handId (int): the id of the hand to add a new player.
     """
     hand_manager.join_hand(hand_id=handId, player_id=playerId)
-    # TODO cambiar por método directamente en el servicio
     hand: Hand = hand_manager.get_hand(id=handId)
+    print(hand_manager.avaliable_games())
 
     game_players = [player_manager.find_player(player_id=player_id).dict() for player_id in hand.players]
 
@@ -142,15 +149,19 @@ async def join_hand(handId: int, playerId: str):
     })
 
     # TODO, CHANGE THIS, update all hand status for all players for now
+    # When the hand is completed, send the 'sorteo' of the hand and update game status
     for player_id in hand.players:
-        await dep_connection_manager().send(json_string=data, player_id=player_id)
+        await connection_manager.send(json_string=data, player_id=player_id)
 
     # Updates the new game to all players
     await games_update()
 
 
 @socket.event("createNewGame")
-async def create_new_game(playerId: str):
+async def create_new_game(
+        playerId: str,
+        hand_manager: HandManager = HandManager()
+        ):
     """ Creates a new game
 
     Args:
@@ -162,7 +173,13 @@ async def create_new_game(playerId: str):
 
 
 @socket.event("dealCards")
-async def deal_cards(playerId: str, handId: int):
+async def deal_cards(
+        playerId: str,
+        handId: int,
+        connection_manager: ConnectionManager = dep_connection_manager(),
+        score_manager: ScoreManager = ScoreManager(),
+        hand_manager: HandManager = HandManager()
+        ):
     """ Deals cards in a hand
 
     Args:
@@ -183,11 +200,19 @@ async def deal_cards(playerId: str, handId: int):
                     'playerHand': hand.player_hand,
                 }
         })
-        await dep_connection_manager().send(json_string=data, player_id=player)
+        await connection_manager.send(json_string=data, player_id=player)
 
 
 @socket.event("playCard")
-async def play_card(playerId: str, handId: int, rank: str, suit: str):
+async def play_card(
+        playerId: str,
+        handId: int,
+        rank: str,
+        suit: str,
+        connection_manager: ConnectionManager = dep_connection_manager(),
+        score_manager: ScoreManager = ScoreManager(),
+        hand_manager: HandManager = HandManager()
+        ):
     """ Plays a card in a hand
     If the card played finish the hand, also notifies the result to all players
 
@@ -230,7 +255,7 @@ async def play_card(playerId: str, handId: int, rank: str, suit: str):
         })
 
         for player in hand.players:
-            await dep_connection_manager().send(json_string=data, player_id=player)
+            await connection_manager.send(json_string=data, player_id=player)
 
 
 def dep_socket_controller():

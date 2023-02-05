@@ -1,11 +1,9 @@
 from __future__ import annotations
 import uuid
-import random
 
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
-from fastapi import Depends
 
 
 class Suit(str, Enum):
