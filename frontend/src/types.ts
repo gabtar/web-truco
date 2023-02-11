@@ -38,7 +38,7 @@ export enum Truco {
 }
 
 export enum Envido {
-  Ninguno = 'NINGUNO',
+  Ninguno = 'NO_CANTADO',
   Envido = 'ENVIDO',
   RealEnvido = 'REAL_ENVIDO',
   FaltaEnvido = 'FALTA_ENVIDO'

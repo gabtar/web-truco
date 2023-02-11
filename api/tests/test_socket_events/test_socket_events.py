@@ -1,103 +1,99 @@
-from datetime import datetime
 import json
 import pytest
 
+from datetime import datetime
+
 from unittest import mock
-from models.models import Player, Hand
+from services.services import HandManager, PlayerManager
 from services.connection_manager import ConnectionManager
-from events.socket_events import send_message, games_update, join_hand
+from events.socket_events import SocketController
 
 pytest_plugins = ('pytest_asyncio',)
 
 
 @pytest.fixture()
-def mock_connection_manager():
+def mock_connection_manager() -> mock.AsyncMock:
     return mock.AsyncMock(ConnectionManager)
 
 
-@pytest.fixture()
-def mock_hand_manager():
-    fake_hand = Hand()
-    fake_hand.id = 0
-    fake_hand.players = ['1234']
-    fake_hand.player_hand = ""
-    fake_hand.player_dealer = ""
-    fake_hand.player_turn = ""
-    fake_hand.name = 'Test'
-
-    hand_manager = mock.MagicMock()
-    hand_manager.avaliable_games.return_value = []
-    hand_manager.get_hand.return_value = fake_hand
-
-    return hand_manager
-
-
-@pytest.fixture()
-def mock_player_manager():
-    player = Player()
-    player.id = '1234'
-    player.name = 'Anónimo'
-
-    player_manager = mock.MagicMock()
-    player_manager.find_player.return_value = player
-
-    return player_manager
-
 @pytest.mark.asyncio
-async def test_send_message(mock_connection_manager, mock_player_manager):
+async def test_send_message(mock_connection_manager, fake_hands_repository, fake_players_repository):
     """ Tests that a message is sent correctly in the socket controller """
-
-    await send_message(
-            playerId='1234',
-            message='test',
+    socket = SocketController(
             connection_manager=mock_connection_manager,
-            player_manager=mock_player_manager
+            hand_manager=HandManager(hands=fake_hands_repository, players=fake_players_repository),
+            player_manager=PlayerManager(players_repository=fake_players_repository)
             )
+    await socket.call_event(event='message', payload={'playerId': '1', 'message': 'test'})
 
-    data = json.dumps({
-        "event": "message",
-        "payload": {"message": {
-            "text": 'test',
-            "player": 'Anónimo',
-            "time": str(datetime.now().strftime("%H:%M:%S"))
+    expected_message = json.dumps({
+        'event': 'message',
+        'payload': {'message': {
+            'text': 'test',
+            'player': 'Anónimo',
+            'time': str(datetime.now().strftime('%H:%M:%S'))
             }
         }})
-    mock_connection_manager.broadcast.assert_called_once_with(json_string=data)
+    mock_connection_manager.broadcast.assert_called_once_with(json_string=expected_message)
 
 
 @pytest.mark.asyncio
-async def test_games_update(mock_connection_manager, mock_hand_manager):
+async def test_games_update(mock_connection_manager,fake_players_repository, fake_hands_repository):
     """ Tests that a message is sent correctly in the socket controller """
-
-    await games_update(
+    socket = SocketController(
             connection_manager=mock_connection_manager,
-            hand_manager=mock_hand_manager
+            hand_manager=HandManager(hands=fake_hands_repository, players=fake_players_repository),
+            player_manager=PlayerManager(players_repository=fake_players_repository)
             )
-    data = json.dumps({
-        "event": "gamesUpdate",
-        "payload": {"gamesList": []}
+    await socket.call_event(event='gamesUpdate', payload={})
+
+    expected_message = json.dumps({
+        'event': 'gamesUpdate',
+        'payload': {'gamesList': [{"id": 1, "name": "Nueva Mano", "currentPlayers": 0}]}
         })
-    mock_connection_manager.broadcast.assert_called_once_with(json_string=data)
+    mock_connection_manager.broadcast.assert_called_once_with(json_string=expected_message)
 
 
 @pytest.mark.asyncio
-async def test_join_hand(mock_connection_manager, mock_hand_manager, mock_player_manager):
-
-    await join_hand(
-            handId=0,
-            playerId='aaaa',
+async def test_hand_update(mock_connection_manager, fake_players_repository, fake_hands_repository):
+    """ Test updates the hand to all players playing/joined to the hand """
+    socket = SocketController(
             connection_manager=mock_connection_manager,
-            player_manager=mock_player_manager,
-            hand_manager=mock_hand_manager
+            hand_manager=HandManager(hands=fake_hands_repository, players=fake_players_repository),
+            player_manager=PlayerManager(players_repository=fake_players_repository)
             )
+    await socket.call_event(event='handUpdate', payload={'hand_id': 0})
 
-    data = json.dumps({
-            'event': 'joinedHand',
-            'payload': {'handId': 0,
-                        'name': 'Test',
-                        'currentPlayers': [{'id': '1234', 'name': 'Anónimo'}],
-                        'playerHand': '',
-                        'playerDealer': ''
-                        }
-    })
-    mock_connection_manager.send.assert_called_once_with(json_string=data, player_id='1234')
+    expected_message = json.dumps({
+        "event": "handUpdated",
+        "payload": {
+            "hand": {
+                'id': 0, 'name': 'Nueva Mano',
+                'players': [{'id': '1', 'name': 'Anónimo'}, {'id': '2', 'name': 'Anónimo'}],
+                'player_turn': {'id': '2', 'name': 'Anónimo'},
+                'player_hand': {'id': '2', 'name': 'Anónimo'},
+                'player_dealer': {'id': '1', 'name': 'Anónimo'},
+                'current_round': 0,
+                'cards_dealed': [], 'cards_played': {'1': [], '2': []},
+                'rounds': [],
+                'truco_status': 1, 'envido': 0
+                }
+            }
+        })
+    mock_connection_manager.send.assert_called_with(json_string=expected_message, player_id='2')
+
+
+@pytest.mark.asyncio
+async def test_join_hand(
+        mock_connection_manager, fake_players_repository, fake_hands_repository
+        ):
+    socket = SocketController(
+            connection_manager=mock_connection_manager,
+            hand_manager=HandManager(hands=fake_hands_repository, players=fake_players_repository),
+            player_manager=PlayerManager(players_repository=fake_players_repository)
+            )
+    await socket.call_event(event='joinGame', payload={'handId': 1, 'playerId': '1'})
+    """ Tests that a player can join a hand """
+    expected_message = json.dumps({'event': 'joinedHand'})
+
+    mock_connection_manager.send.assert_any_call(json_string=expected_message, player_id='1')

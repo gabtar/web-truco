@@ -22,14 +22,12 @@ function Board() {
     payload: { playerId: player.id, handId: game.id, suit: suit, rank: rank }
   }));
 
+  const isPlayerTurn = game.player_turn === player.id ? true : false;
+  const isDealer = game.player_dealer === player.id ? true : false;
+
   const cardsDealed = game.cards_dealed.map((card: Card, index: number) => 
-    <div key={index} className="spanish-card" onClick={() => handlePlayCard(card.suit, card.rank)}>{card.rank}{card.suit}</div>
+    <button key={index} className="spanish-card" disabled={!isPlayerTurn} onClick={() => handlePlayCard(card.suit, card.rank)}>{card.rank}{card.suit}</button>
   );
-  /* UI - Debería mostrar las cartas del oponente o una sombra/avatar del oponente?
-    Mostrar la mesa con las cartas jugadas
-    Mostrar las cartas del jugador
-    Mostrar una botonera/controles de la partida
-    */
 
   return (
     <>
@@ -45,10 +43,10 @@ function Board() {
         {cardsDealed}
        </div>
        <div>
-        {player.id == game.player_dealer ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : '' }
-        <button className="btn">Cantar Envido</button>
-        <button className="btn">Cantar Truco</button>
-        <button className="btn">Cantar Flor</button>
+        {isDealer ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : '' }
+        <button className="btn" disabled={!isPlayerTurn}>Cantar Envido</button>
+        <button className="btn" disabled={!isPlayerTurn}>Cantar Truco</button>
+        <button className="btn" disabled={!isPlayerTurn}>Cantar Flor</button>
        </div>
     </>
   );

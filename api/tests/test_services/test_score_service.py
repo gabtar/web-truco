@@ -7,25 +7,26 @@ from repositories.repository import InMemoryScoreRepository, InMemoryGamesReposi
 
 
 @pytest.fixture()
-def fake_hands_repository():
+def fake_hands_repository(fake_players_repository):
     hand = Hand(id=0)
-    players = [uuid.uuid4(), uuid.uuid4()]
-    hand.cards_dealed[players[0]] = []
-    hand.cards_dealed[players[1]] = []
-    hand.cards_played[players[0]] = []
-    hand.cards_played[players[1]] = []
+    player1 = fake_players_repository.get_by_id(id='1')
+    player2 = fake_players_repository.get_by_id(id='2')
+    hand.cards_dealed[player1.id] = []
+    hand.cards_dealed[player2.id] = []
+    hand.cards_played[player1.id] = []
+    hand.cards_played[player2.id] = []
     hand.current_round = 0
-    hand.player_dealer = players[0]
-    hand.player_hand = players[1]
-    hand.player_turn = players[1]
-    hand.players.extend(players)
+    hand.player_dealer = player1.id
+    hand.player_hand = player2.id
+    hand.player_turn = player2.id
+    hand.players.extend([player1, player2])
 
     # Playing in this order the winner of the hand is player 2
     cards_p1 = [Card(suit='E', rank='4'), Card(suit='E', rank='7'), Card(suit='O', rank='4')]
     cards_p2 = [Card(suit='E', rank='2'), Card(suit='C', rank='4'), Card(suit='B', rank='3')]
 
-    hand.cards_played[players[0]] = cards_p1
-    hand.cards_played[players[1]] = cards_p2
+    hand.cards_played[player1.id] = cards_p1
+    hand.cards_played[player2.id] = cards_p2
 
     fake_repository = InMemoryGamesRepository()
     fake_repository.save(hand)
@@ -48,9 +49,9 @@ def test_check_round_winner(fake_score_repository, fake_hands_repository):
     second_round_winner = score_manager.check_round_winner(hand=hand, round_number=1)
     third_round_winner = score_manager.check_round_winner(hand=hand, round_number=2)
 
-    assert first_round_winner == hand.players[1]
-    assert second_round_winner == hand.players[0]
-    assert third_round_winner == hand.players[1]
+    assert first_round_winner == hand.players[1].id
+    assert second_round_winner == hand.players[0].id
+    assert third_round_winner == hand.players[1].id
 
 
 def test_hand_winner(fake_score_repository, fake_hands_repository):
@@ -60,7 +61,7 @@ def test_hand_winner(fake_score_repository, fake_hands_repository):
 
     hand_winner = score_manager.hand_winner(hand=hand)
 
-    assert hand_winner == hand.players[1]
+    assert hand_winner == hand.players[1].id
 
 
 def test_assing_score(fake_score_repository, fake_hands_repository):
@@ -74,5 +75,5 @@ def test_assing_score(fake_score_repository, fake_hands_repository):
 
     hand_score: Score = score_repository.get_by_id(id=0)
 
-    assert hand_score.score[hand.players[0]] == 0
-    assert hand_score.score[hand.players[1]] == 1
+    assert hand_score.score[hand.players[0].id] == 0
+    assert hand_score.score[hand.players[1].id] == 1

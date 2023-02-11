@@ -1,38 +1,8 @@
 import pytest
 import uuid
 
-from typing import List
 from models.models import Hand
-from repositories.repository import InMemoryGamesRepository
 from services.services import HandManager, GameException
-# from unittest import mock
-
-
-@pytest.fixture()
-def fake_hands_repository():
-    return InMemoryGamesRepository()
-
-
-@pytest.fixture()
-def fake_empty_hand() -> Hand:
-    hand = Hand(id=0)
-    return hand
-
-
-@pytest.fixture()
-def fake_full_hand() -> Hand:
-    hand = Hand(id=0)
-    players = [uuid.uuid4(), uuid.uuid4()]
-    hand.cards_dealed[players[0]] = []
-    hand.cards_dealed[players[1]] = []
-    hand.cards_played[players[0]] = []
-    hand.cards_played[players[1]] = []
-    hand.current_round = 0
-    hand.player_dealer = players[0]
-    hand.player_hand = players[1]
-    hand.player_turn = players[1]
-    hand.players.extend(players)
-    return hand
 
 
 def test_create_new_hand(fake_hands_repository):
@@ -45,18 +15,16 @@ def test_create_new_hand(fake_hands_repository):
     assert fake_hands_repository.get_by_id(id=hand_id) is not None
 
 
-def test_join_hand(fake_hands_repository):
+def test_join_hand(fake_hands_repository, fake_players_repository):
     """ Test that a user can join to an open hand"""
-    hand_manager = HandManager(hands=fake_hands_repository)
-    player_one_id = 'aaaaaaaa'
-    player_two_id = 'bbbbbbbb'
+    hand_manager = HandManager(hands=fake_hands_repository, players=fake_players_repository)
 
-    hand_id = hand_manager.new_hand(player_id=player_one_id)
-    hand_manager.join_hand(player_id=player_one_id, hand_id=hand_id)
-    hand_manager.join_hand(player_id=player_two_id, hand_id=hand_id)
+    hand_id = hand_manager.new_hand(player_id='1')
+    hand_manager.join_hand(player_id='1', hand_id=hand_id)
+    hand_manager.join_hand(player_id='2', hand_id=hand_id)
 
-    assert player_one_id in fake_hands_repository.get_by_id(id=hand_id).players
-    assert player_two_id in fake_hands_repository.get_by_id(id=hand_id).players
+    assert fake_players_repository.get_by_id(id='1') in fake_hands_repository.get_by_id(id=hand_id).players
+    assert fake_players_repository.get_by_id(id='2') in fake_hands_repository.get_by_id(id=hand_id).players
 
 
 def test_cannot_join_hand_when_is_complete(fake_full_hand, fake_hands_repository):
@@ -74,16 +42,20 @@ def test_cannot_join_hand_when_is_complete(fake_full_hand, fake_hands_repository
     assert player_three_id not in fake_hands_repository.get_by_id(id=hand_id).players
 
 
-def test_when_player_completes_a_hand_is_automatically_initialized(fake_empty_hand, fake_hands_repository):
+def test_when_player_completes_a_hand_is_automatically_initialized(
+        fake_empty_hand,
+        fake_hands_repository,
+        fake_players_repository
+        ):
     """ Tests that when a player join completes a hand, the hand is started """
-    hand_manager = HandManager(fake_hands_repository)
+    hand_manager = HandManager(hands=fake_hands_repository, players=fake_players_repository)
+    player1 = fake_players_repository.get_by_id(id='1')
+    player2 = fake_players_repository.get_by_id(id='2')
 
-    player_one_id = 'aaaaaaaa'
-    player_two_id = 'bbbbbbbb'
-    hand_id = hand_manager.new_hand(player_id=player_one_id)
+    hand_id = hand_manager.new_hand(player_id=player1.id)
     new_hand = fake_hands_repository.get_by_id(id=hand_id)
-    hand_manager.join_hand(player_id=player_one_id, hand_id=hand_id)
-    hand_manager.join_hand(player_id=player_two_id, hand_id=hand_id)
+    hand_manager.join_hand(player_id=player1.id, hand_id=hand_id)
+    hand_manager.join_hand(player_id=player2.id, hand_id=hand_id)
 
     assert new_hand.current_round == 0
     assert new_hand.player_dealer is not None
@@ -118,32 +90,30 @@ def test_can_deal_cards_in_a_hand(fake_full_hand, fake_hands_repository):
     assert cards_dealed == hand.cards_dealed
 
 
-def test_cannot_deal_cards_if_hand_is_still_open(fake_hands_repository):
+def test_cannot_deal_cards_if_hand_is_still_open(fake_hands_repository, fake_players_repository):
     """ Test that returns all avaliable games to join"""
-    hand_manager = HandManager(fake_hands_repository)
-    player_id = 'aaaaaaaa'
+    hand_manager = HandManager(hands=fake_hands_repository, players=fake_players_repository)
 
-    hand_id = hand_manager.new_hand(player_id=player_id)
-    hand_manager.join_hand(hand_id=hand_id, player_id=player_id)
+    hand_id = hand_manager.new_hand(player_id='1')
+    hand_manager.join_hand(hand_id=hand_id, player_id='1')
 
     with pytest.raises(GameException) as excep:
-        hand_manager.deal_cards(player_id=player_id, hand_id=hand_id)
+        hand_manager.deal_cards(player_id='1', hand_id=hand_id)
 
     assert "Acción inválida" in str(excep)
 
 
-def test_cannot_deal_cards_if_is_not_the_dealer(fake_hands_repository):
-    """ Tests tha cannot deal cards if the player is not the dealer of the hand """
-    hand_manager = HandManager(fake_hands_repository)
-    player_id = 'aaaaaaaa'
-    player_id_two = 'bbbbbbbb'
+def test_cannot_deal_cards_if_is_not_the_dealer(fake_hands_repository, fake_players_repository):
+    """ Tests that cannot deal cards if the player is not the dealer of the hand """
+    hand_manager = HandManager(hands=fake_hands_repository, players=fake_players_repository)
 
-    hand_id = hand_manager.new_hand(player_id=player_id)
-    hand_manager.join_hand(hand_id=hand_id, player_id=player_id)
-    hand_manager.join_hand(hand_id=hand_id, player_id=player_id_two)
+    hand_id = hand_manager.new_hand(player_id='1')
+    hand_manager.join_hand(hand_id=hand_id, player_id='1')
+    hand_manager.join_hand(hand_id=hand_id, player_id='2')
 
     with pytest.raises(GameException) as excep:
-        hand_manager.deal_cards(player_id=player_id_two, hand_id=hand_id)
+        player_hand = hand_manager.get_hand(id=hand_id).player_hand
+        hand_manager.deal_cards(player_id=player_hand, hand_id=hand_id)
 
     assert "Acción inválida" in str(excep)
 

@@ -14,6 +14,7 @@ function GamesList() {
     payload: { playerId: player.id }
   }));
 
+  // TODO on click llevar a la ruta de game interface
   const handleJoinGame = (handId: number) => socket.send(JSON.stringify({
     event: "joinGame",
     payload: { playerId: player.id, handId: handId }

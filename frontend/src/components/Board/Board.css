@@ -16,6 +16,15 @@
   background-color: var(--light-yellow);
 }
 
+.spanish-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spanish-card:disabled:hover {
+  transform: none;
+}
+
 .spanish-card:hover {
   transform: scale(1.02);
 }

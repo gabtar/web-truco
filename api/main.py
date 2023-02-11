@@ -37,6 +37,7 @@ async def websocket_truco(
                         }
                 })
                 print("ERROR: ", data)
+                print("ERROR message: ", str(e))
                 await manager.send(json_string=error_message, player_id=data['payload']['playerId'])
 
     except WebSocketDisconnect:

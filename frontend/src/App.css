@@ -41,8 +41,18 @@ h1, h2, h3, h4, h5, h6 {
   color: #FFF;
   padding: 0 1.2rem;
 }
+
 .btn:hover {
   background-color: var(--green);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  background-color: var(--blue);
 }
 
 .container {

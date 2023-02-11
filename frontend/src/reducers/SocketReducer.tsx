@@ -19,43 +19,28 @@ export const trucoReducer = (state: any, action: any) => {
       const navEvent = new PopStateEvent('popstate');
       window.dispatchEvent(navEvent);
 
-      return { ...state,
-        game: { ...state.game, 
-          id: payload.handId,
-          name: payload.name,
-          players: payload.currentPlayers,
-          player_hand: payload.playerHand,
-          player_dealer: payload.playerDealer
-        }
-      };
-    case 'newPlayerJoined':
-      // Recive el player ID que se unió
-      return {
-        ...state, 
-        game: { ...state.game,
-          players: [...state.game.players, payload.player]
-        }
-      };
-    case 'receiveDealedCards':
-      return { ...state,
-        game: { ...state.game,
-          cards_dealed: payload.cards,
-          player_turn: payload.playerTurn,
-          player_hand: payload.playerHand,
-        }
-      };
-    case 'cardPlayed':
-      const cards_played = new Map<string, Card>();
-      for (const key in payload.cardsPlayed) {
-        cards_played.set(key, payload.cardsPlayed[key]);
+      return { ...state };
+    case 'handUpdated':
+      // Mapeo a la estructura de cartas en mesa
+      const cards_in_hand = new Map<string, Card>();
+      for (const key in payload.hand.cards_played) {
+        cards_in_hand.set(key, payload.hand.cards_played[key]);
       }
 
       return { ...state,
-        game: { ...state.game,
-          cards_played: cards_played,
-          player_turn: payload.playerTurn,
+        game: { ...state.game, 
+          id: payload.hand.id,
+          name: payload.hand.name,
+          players: payload.hand.players,
+          player_hand: payload.hand.player_hand,
+          player_dealer: payload.hand.player_dealer,
+          player_turn: payload.hand.player_turn,
+          cards_played: cards_in_hand,
+          cards_dealed: payload.hand.cards_dealed,
+          truco_status: payload.hand.truco_status,
+          envido_status: payload.hand.envido,
         }
-      };
+    }
     default:
       console.log("Evento de WebSocket sin atender aún!!!");
       return { ...state }

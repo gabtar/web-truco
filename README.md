@@ -21,8 +21,10 @@ Juego de Truco Argentino usando websockets
 - [x] Notificador de errores/acciones inválidas durante la partida.
 - [x] Usar la context API de react para guardar estado de la partida/juego
 - [x] React router o usar context para navegar entre páginas
+- [x] Mejorar jugabilidad/ Deshabilitar cartas al jugar
 - [ ] Tipos en el reducer/generalizar acciones
 - [x] Jugar la carta durante la partida y mostrar al oponente
+- [ ] Notificar cuando finaliza la mano/gana un jugador
 
 ### Otros:
 - [x] Dockerizar en algún momento
