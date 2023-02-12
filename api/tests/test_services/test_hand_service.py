@@ -57,7 +57,7 @@ def test_when_player_completes_a_hand_is_automatically_initialized(
     hand_manager.join_hand(player_id=player1.id, hand_id=hand_id)
     hand_manager.join_hand(player_id=player2.id, hand_id=hand_id)
 
-    assert new_hand.current_round == 0
+    assert len(new_hand.rounds) == 1
     assert new_hand.player_dealer is not None
     assert new_hand.player_turn is not None
     assert new_hand.player_hand is not None
@@ -85,7 +85,7 @@ def test_can_deal_cards_in_a_hand(fake_full_hand, fake_hands_repository):
 
     hand_manager = HandManager(fake_hands_repository)
 
-    cards_dealed = hand_manager.deal_cards(player_id=players[0], hand_id=0)
+    cards_dealed = hand_manager.deal_cards(player_id=hand.player_dealer, hand_id=0)
 
     assert cards_dealed == hand.cards_dealed
 
@@ -124,7 +124,6 @@ def test_play_card(fake_hands_repository, fake_full_hand):
     hands_repository = fake_hands_repository
     hands_repository.save(hand)
     hand_manager = HandManager(hands_repository)
-    hand_manager.initialize_hand(hand.id)
 
     # He has the initial turn in the first round
     player_hand = hand.player_hand
@@ -137,9 +136,8 @@ def test_play_card(fake_hands_repository, fake_full_hand):
                            suit=suit,
                            rank=rank)
 
-    assert hand.cards_played[player_hand][0].suit == suit
-    assert hand.cards_played[player_hand][0].rank == rank
-    assert hand.current_round == 0
+    assert hand.rounds[0].cards_played[player_hand].suit == suit
+    assert hand.rounds[0].cards_played[player_hand].rank == rank
 
 
 def test_play_card_advances_to_next_round_when_all_players_played_a_card(
@@ -149,7 +147,6 @@ def test_play_card_advances_to_next_round_when_all_players_played_a_card(
     hands_repository = fake_hands_repository
     hands_repository.save(hand)
     hand_manager = HandManager(hands_repository)
-    hand_manager.initialize_hand(hand.id)
 
     # He has the initial turn in the first round
     player_hand = hand.player_hand
@@ -165,7 +162,7 @@ def test_play_card_advances_to_next_round_when_all_players_played_a_card(
                            suit=cards_dealed[player_dealer][0].suit,
                            rank=cards_dealed[player_dealer][0].rank)
 
-    assert hand.current_round == 1
+    assert len(hand.rounds) == 2
 
 
 def test_cannot_play_a_card_that_has_not_been_dealed_to_player(
@@ -213,4 +210,4 @@ def test_cannot_play_a_card_when_its_not_player_turn(
                                rank=rank)
 
     assert 'No es tu turno' in str(excep)
-    assert not hand.cards_played[player_dealer]
+    assert hand.rounds[0].cards_played[player_dealer] is None

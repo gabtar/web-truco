@@ -1,7 +1,7 @@
 import random
 
 from typing import List, Dict, Optional
-from models.models import Hand, Suit, Rank, Card, Score, Player
+from models.models import Hand, Suit, Rank, Card, Score, Player, Round
 # Games repository dependence
 from repositories.repository import (
         AbstractHandRepository, dep_games_repository,
@@ -56,7 +56,7 @@ class HandManager:
         hand = self.hand_repository.get_by_id(id=hand_id)
 
         # TODO, check player is plaing hand -> player_id not in hand.players or
-        if  player_id != hand.player_dealer:
+        if player_id != hand.player_dealer:
             raise GameException('Acción inválida')
 
         cards = random.sample(range(40), len(hand.players) * 3)
@@ -86,17 +86,20 @@ class HandManager:
 
         # Juega la carta y la elimina de las cartas en mano
         hand.cards_dealed[player_id].remove(card)
-        hand.cards_played[player_id].append(card)
+        hand.rounds[-1].cards_played[player_id] = card
 
         # Dar Turno al siguiente jugador
         round_finished = True
         for player in hand.players:
-            if len(hand.cards_played[player.id]) < hand.current_round + 1:
+            if hand.rounds[-1].cards_played[player.id] is None:
                 hand.player_turn = player.id
                 round_finished = False
 
-        if round_finished:
-            hand.current_round += 1
+        if round_finished and len(hand.rounds) < 3:
+            # TODO, crear el nuevo round!
+            cards_played = {player.id: None for player in hand.players}
+            hand.rounds.append(Round(cards_played=cards_played))
+
         self.hand_repository.update(hand)
 
         return hand
@@ -120,7 +123,6 @@ class HandManager:
             self.initialize_hand(hand_id=hand.id)
 
         # Inicializa las variables del jugador en la mano
-        hand.cards_played[player_id] = []
         hand.cards_dealed[player_id] = []
 
         self.hand_repository.update(hand)
@@ -138,7 +140,10 @@ class HandManager:
                 hand.player_turn = player.id
                 hand.player_hand = player.id
 
-        hand.current_round = 0
+        # TODO agregar el modelo del round
+        cards_played = {player.id: None for player in hand.players}
+        hand.rounds.append(Round(cards_played=cards_played))
+
         self.hand_repository.update(hand)
 
     def new_hand(self, player_id: str) -> int:
@@ -163,56 +168,9 @@ class ScoreManager:
             score.score[player.id] = 0
         self.score_repository.save(score)
 
-    def check_round_winner(
-            self,
-            hand: Hand,
-            round_number: int
-            ) -> Optional[str]:
-        """ Determines the winner of a round
-
-        Returns: The (id: str) winner of the round or null if it's parda
-        """
-        # TODO, esto no va a funcionar para 4 o 6 jugadores
-        cards_played_p1 = hand.cards_played[hand.players[0].id]
-        cards_played_p2 = hand.cards_played[hand.players[1].id]
-
-        card_p1: Card = hand.cards_played[hand.players[0].id][round_number] if len(cards_played_p1) > round_number else None
-        card_p2: Card = hand.cards_played[hand.players[1].id][round_number] if len(cards_played_p2) > round_number else None
-
-        if card_p1 is None or card_p2 is None:
-            return None
-
-        if card_p1 == card_p2:
-            return None
-        elif card_p1 > card_p2:
-            return hand.players[0].id
-        elif card_p1 < card_p2:
-            return hand.players[1].id
-
-    def hand_winner(self, hand: Hand) -> Optional[str]:
-        """ Determines the winner of a hand """
-        rounds_winned = [0, 0]  # Stores the rounds winned by each player
-        completed_rounds = min([len(cards) for cards in hand.cards_played.values()])
-
-        # TODO ver de usar un iterador sobre las cartas en mesa
-        # Itera sobre la menor cantidad de rounds completos
-        for round in range(completed_rounds):
-            round_winner = self.check_round_winner(hand=hand, round_number=round)
-
-            if round_winner == hand.players[0].id:
-                rounds_winned[0] += 1
-            else:
-                rounds_winned[1] += 1
-
-        # Verificar si alguno ganó 2 rounds
-        if 2 in rounds_winned:
-            return hand.players[rounds_winned.index(max(rounds_winned))].id
-
-        return None
-
     def assign_score(self, hand: Hand):
         """ Assigns the score the the passed hand """
         score: Score = self.score_repository.get_by_id(id=hand.id)
-        score.score[self.hand_winner(hand=hand)] += 1 * hand.truco_status
+        score.score[hand.winner] += 1 * hand.truco_status
 
         self.score_repository.update(score)

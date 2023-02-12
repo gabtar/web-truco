@@ -38,7 +38,7 @@ export enum Truco {
 }
 
 export enum Envido {
-  Ninguno = 'NO_CANTADO',
+  NoCantado = 'NO_CANTADO',
   Envido = 'ENVIDO',
   RealEnvido = 'REAL_ENVIDO',
   FaltaEnvido = 'FALTA_ENVIDO'
@@ -54,6 +54,11 @@ export type GameState = {
   cards_played: Map<string, Card[]>,
   cards_dealed: Card[],
   truco_status: Truco,
+  rounds: Round[]
   envido_status: Envido,
   score: Map<string, number>
+}
+
+export type Round = {
+  cards_played: Map<string, Card>
 }

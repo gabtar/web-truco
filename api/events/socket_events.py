@@ -154,12 +154,13 @@ class SocketController:
         await self.handUpdate(hand_id=hand.id)
 
         # TODO, Extraer todo a un evento updateScore?
-        if self._score_manager.hand_winner(hand=hand) is not None:
-            self._score_manager.assign_score(hand=hand)
+        # if self._score_manager.hand_winner(hand=hand) is not None:
+        if hand.winner is not None:
+            # self._score_manager.assign_score(hand=hand)
 
             data = json.dumps({
                 "event": "handWinner",
-                "player": self._score_manager.hand_winner(hand),
+                "player": hand.winner,
             })
 
             for player in hand.players:

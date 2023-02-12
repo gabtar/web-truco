@@ -1,4 +1,4 @@
-import { Card } from '../types';
+import { Card, Round } from '../types';
 
 export const trucoReducer = (state: any, action: any) => {
   const { event, payload } = action;
@@ -27,6 +27,16 @@ export const trucoReducer = (state: any, action: any) => {
         cards_in_hand.set(key, payload.hand.cards_played[key]);
       }
 
+      // Mapeo de los rounds
+      let rounds: Round[] = [];
+      for (const round of payload.hand.rounds) {
+        const newRound = { cards_played: new Map<string, Card>() } as Round;
+        for (const key in round.cards_played) {
+          newRound.cards_played.set(key, round.cards_played[key]);
+        }
+        rounds.push(newRound);
+      }
+
       return { ...state,
         game: { ...state.game, 
           id: payload.hand.id,
@@ -37,6 +47,7 @@ export const trucoReducer = (state: any, action: any) => {
           player_turn: payload.hand.player_turn,
           cards_played: cards_in_hand,
           cards_dealed: payload.hand.cards_dealed,
+          rounds: rounds,
           truco_status: payload.hand.truco_status,
           envido_status: payload.hand.envido,
         }

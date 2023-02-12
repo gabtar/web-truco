@@ -110,8 +110,14 @@ class Envido(int, Enum):
 
 class Round(BaseModel):
     """ A Round of a hand of truco """
-    winner: Optional[str]
     cards_played: Dict[str, Optional[Card]]
+
+    @property
+    def completed(self) -> bool:
+        for card in self.cards_played.values():
+            if card is None:
+                return False
+        return True
 
     @property
     def winner(self) -> Optional[str]:
@@ -120,10 +126,10 @@ class Round(BaseModel):
         Returns:
             player(Optional[str]): the id of the player who won the round
         """
-        # Si no todos jugaron la carta no hay ganador
-        for card in self.cards_played.values():
-            if card is None:
-                return None
+        # Si el round sigue activo, no hay ganador
+        if not self.completed:
+            return None
+
         # Get the highest card
         highest_value = max([card._value
                              for card in self.cards_played.values()])
@@ -135,7 +141,10 @@ class Round(BaseModel):
         if len(highest_cards_players) == 1:
             return highest_cards_players[0]
 
-        # Si hay empate debería devolver como que ganaron los 2 jugadores?
+        # TODO, ver de plantear la lógica del ganador con esto
+        # -> Si hay empate debería devolver como que ganaron los 2 jugadores?
+        # Así, al mejor de 2 de 3 rounds(puntos) creo que podría funcionar
+        # Ver los casos borde de desempates
         return None
 
 
@@ -147,9 +156,7 @@ class Hand(BaseModel):
     player_turn: Optional[str]  # Al jugador que le toca tirar carta
     player_hand: Optional[str]  # El jugador que es mano
     player_dealer: Optional[str]  # El que reparte la mano
-    current_round: Optional[int]
     cards_dealed: Dict[str, List[Card]] = {}
-    cards_played: Dict[str, List[Card]] = {}
     rounds: List[Round] = []
     truco_status: Truco = Truco.NO_CANTADO
     envido: Envido = Envido.NO_CANTADO
@@ -171,16 +178,22 @@ class Hand(BaseModel):
 
         # Definir al ganador según las reglas
         # TODO, ojo 'bastante' harcodeado(y para 2 jugadores!) pero pasan los tests
-        if len(self.rounds) > 0 and round_winner[0] is None:
-            if len(self.rounds) > 1 and round_winner[1] is None:
-                if len(self.rounds) > 2 and round_winner[2] is None:
+        # TODO, contar los rounds completos!!!! sino los que no jugaron carta todavía 
+        # los cuenta igual
+        if len(self.rounds) > 0 and round_winner[0] is None and self.rounds[0].completed:
+            if len(self.rounds) > 1 and round_winner[1] is None and self.rounds[1].completed:
+                if len(self.rounds) > 2 and round_winner[2] is None and self.rounds[2].completed:
                     return self.player_hand
                 else:
                     return round_winner[2]
+            elif len(self.rounds) == 1:
+                return round_winner[0]
             else:
                 return round_winner[1]
-        elif len(self.rounds) > 0:
+        elif len(self.rounds) > 0 and self.rounds[0].completed:
             # Alguien ganó el primer round
+            if not self.rounds[1].completed:
+                return None
             if len(self.rounds) > 1 and round_winner[1] is None:
                 return round_winner[0]
             else:
