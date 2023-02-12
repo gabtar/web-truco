@@ -44,7 +44,6 @@ export enum Envido {
   FaltaEnvido = 'FALTA_ENVIDO'
 }
 
-// TODO -> TO camel case!!!!
 export type GameState = {
   id: number,
   players: Player[]
@@ -54,8 +53,10 @@ export type GameState = {
   cards_played: Map<string, Card[]>,
   cards_dealed: Card[],
   truco_status: Truco,
-  rounds: Round[]
+  rounds: Round[],
+  winner: string,
   envido_status: Envido,
+  // TODO, separar el score de la mano?
   score: Map<string, number>
 }
 

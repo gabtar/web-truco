@@ -23,6 +23,7 @@ const initialGameState : GameState = {
   cards_played: new Map<string, Card[]>(),
   cards_dealed: [emptyCard, emptyCard, emptyCard],
   rounds: [],
+  winner: '',
   truco_status: Truco.NoCantado,
   envido_status: Envido.NoCantado,
   score: new Map<string, number>()

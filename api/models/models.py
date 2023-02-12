@@ -74,23 +74,6 @@ class Card(BaseModel):
         super().__init__(**kwargs)
         self._value = get_value_of_card(rank=self.rank, suit=self.suit)
 
-    # TODO, ya no sería necesario
-    def __eq__(self, other) -> bool:
-        """ Define equal cards """
-        return self._value == other._value
-
-    def __hash__(self):
-        """ Define objects equality """
-        return hash(self.suit+self.rank)
-
-    def __lt__(self, other) -> bool:
-        """ Define if a card is lower than other """
-        return self._value < other._value
-
-    def __gt__(self, other) -> bool:
-        """ Define if a card is higher than other """
-        return self._value > other._value
-
 
 class Truco(int, Enum):
     """ Ranges of truco in a Hand, the integer values are the score winned """
@@ -113,7 +96,8 @@ class Round(BaseModel):
     cards_played: Dict[str, Optional[Card]]
 
     @property
-    def completed(self) -> bool:
+    def finished(self) -> bool:
+        """ Check if the round is finished """
         for card in self.cards_played.values():
             if card is None:
                 return False
@@ -127,7 +111,7 @@ class Round(BaseModel):
             player(Optional[str]): the id of the player who won the round
         """
         # Si el round sigue activo, no hay ganador
-        if not self.completed:
+        if not self.finished:
             return None
 
         # Get the highest card
@@ -180,9 +164,9 @@ class Hand(BaseModel):
         # TODO, ojo 'bastante' harcodeado(y para 2 jugadores!) pero pasan los tests
         # TODO, contar los rounds completos!!!! sino los que no jugaron carta todavía 
         # los cuenta igual
-        if len(self.rounds) > 0 and round_winner[0] is None and self.rounds[0].completed:
-            if len(self.rounds) > 1 and round_winner[1] is None and self.rounds[1].completed:
-                if len(self.rounds) > 2 and round_winner[2] is None and self.rounds[2].completed:
+        if len(self.rounds) > 0 and round_winner[0] is None and self.rounds[0].finished:
+            if len(self.rounds) > 1 and round_winner[1] is None and self.rounds[1].finished:
+                if len(self.rounds) > 2 and round_winner[2] is None and self.rounds[2].finished:
                     return self.player_hand
                 else:
                     return round_winner[2]
@@ -190,9 +174,9 @@ class Hand(BaseModel):
                 return round_winner[0]
             else:
                 return round_winner[1]
-        elif len(self.rounds) > 0 and self.rounds[0].completed:
+        elif len(self.rounds) > 0 and self.rounds[0].finished:
             # Alguien ganó el primer round
-            if not self.rounds[1].completed:
+            if not self.rounds[1].finished:
                 return None
             if len(self.rounds) > 1 and round_winner[1] is None:
                 return round_winner[0]

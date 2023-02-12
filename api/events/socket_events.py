@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Dict
 from fastapi.encoders import jsonable_encoder
-from models.models import Hand, Player
+from models.models import Hand, Player, Score
 from services.connection_manager import ConnectionManager, dep_connection_manager
 from services.services import HandManager, ScoreManager, PlayerManager
 
@@ -90,6 +90,7 @@ class SocketController:
             hand_status = jsonable_encoder(hand)
             # Manda sólo las cartas del jugador corriente
             hand_status['cards_dealed'] = hand_status['cards_dealed'][player.id]
+            hand_status['winner'] = hand.winner
 
             data = json.dumps({
                 "event": "handUpdated",
@@ -156,16 +157,23 @@ class SocketController:
         # TODO, Extraer todo a un evento updateScore?
         # if self._score_manager.hand_winner(hand=hand) is not None:
         if hand.winner is not None:
-            # self._score_manager.assign_score(hand=hand)
+            score: Score = self._score_manager.assign_score(hand=hand)
 
             data = json.dumps({
-                "event": "handWinner",
-                "player": hand.winner,
+                "event": "updateScore",
+                "payload": {
+                    "score": jsonable_encoder(score)
+                },
             })
 
             for player in hand.players:
                 await self._connection_manager.send(json_string=data, player_id=player.id)
-            # TODO, inicializar una nueva mano / Activar repartir de vuelta
+
+            # TODO, por ahora reinicia toda la mano
+            # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
+            # al que estaba
+            self._hand_manager.initialize_hand(hand_id=hand.id)
+            await self.handUpdate(hand_id=hand.id)
 
 
 socket = SocketController()

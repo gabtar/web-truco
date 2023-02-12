@@ -75,7 +75,8 @@ async def test_hand_update(mock_connection_manager, fake_players_repository, fak
                 'player_dealer': '1',
                 'cards_dealed': [],
                 'rounds': [{"cards_played": {"1": None, "2": None}}],
-                'truco_status': 1, 'envido': 0
+                'truco_status': 1, 'envido': 0,
+                'winner': None,
                 }
             }
         })

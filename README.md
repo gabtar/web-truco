@@ -6,12 +6,16 @@ Juego de Truco Argentino usando websockets
 
 ### Backend:
 - [x] Desacople de los modelos básicos de dominio de la base de datos
-- [ ] Agregar score de la mano (En proceso)
+- [x] Agregar score de la mano (En proceso)
 - [x] Agregar un servicio/manager para crear/buscar/borrar jugadores
 - [x] Mejorar el socketController
-- [ ] Tests a los eventos del websocket/socketControler que devuelva los json
+- [x] Tests a los eventos del websocket/socketControler que devuelva los json
+- [x] Reiniciar la mano cuando hay ganador
+- [ ] Refactorizar lógica del ganador de la mano
+- [ ] Si ya hay ganador que no se puedan jugar más cartas
+- [ ] Agregar niveles de truco / cantar truco
 - [ ] Agregar envido
-- [ ] Agregar niveles de truco
+- [ ] Ir al mazo
 
 ### Frontend:
 - [x] Mejorar estilos/colores css

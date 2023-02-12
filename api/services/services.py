@@ -27,6 +27,8 @@ class PlayerManager:
 
     def create(self) -> Player:
         player = Player()
+        # TODO, ver de asignar nombre random?
+        player.name = f'Anónimo#{len(self.players_repository._players)}'
         self.players_repository.save(player)
         return player
 
@@ -96,7 +98,7 @@ class HandManager:
                 round_finished = False
 
         if round_finished and len(hand.rounds) < 3:
-            # TODO, crear el nuevo round!
+            # Crea el nuevo round!
             cards_played = {player.id: None for player in hand.players}
             hand.rounds.append(Round(cards_played=cards_played))
 
@@ -127,7 +129,7 @@ class HandManager:
 
         self.hand_repository.update(hand)
 
-    def initialize_hand(self, hand_id: int):
+    def initialize_hand(self, hand_id: int) -> None:
         """ Sets the dealer, the player who is hand, and initialize hand variables """
         hand = self.hand_repository.get_by_id(id=hand_id)
 
@@ -136,13 +138,16 @@ class HandManager:
 
         hand.player_dealer = random.choice(hand.players).id
         for player in hand.players:
+            # TODO, necesario por ahora para limpiar las cartas repartidas
+            # Cuando se reinicia la mano
+            hand.cards_dealed[player.id] = []
+
             if player.id != hand.player_dealer:
                 hand.player_turn = player.id
                 hand.player_hand = player.id
 
-        # TODO agregar el modelo del round
         cards_played = {player.id: None for player in hand.players}
-        hand.rounds.append(Round(cards_played=cards_played))
+        hand.rounds = [Round(cards_played=cards_played)]
 
         self.hand_repository.update(hand)
 
@@ -161,16 +166,21 @@ class ScoreManager:
     def __init__(self, score_repository: AbstractScoreRepository = dep_scores_repository()):
         self.score_repository = score_repository
 
-    def initialize_score(self, hand: Hand):
+    def get_score(self, hand_id: int) -> Score:
+        self.score_repository.get_by_id(id=hand_id)
+
+    def initialize_score(self, hand: Hand) -> None:
         score: Score = Score()
         score.id = hand.id
         for player in hand.players:
             score.score[player.id] = 0
         self.score_repository.save(score)
 
-    def assign_score(self, hand: Hand):
+    def assign_score(self, hand: Hand) -> Score:
         """ Assigns the score the the passed hand """
         score: Score = self.score_repository.get_by_id(id=hand.id)
         score.score[hand.winner] += 1 * hand.truco_status
+        # TODO asignar score del envido
 
         self.score_repository.update(score)
+        return score
