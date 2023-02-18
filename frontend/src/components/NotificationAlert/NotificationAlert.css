@@ -1,8 +1,8 @@
 .notification {
   background-color: #BD3D3933;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.99);
   border-radius: .2rem;
   border: 1px solid #BD3D39FF;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.99);
   padding: 1rem;
   margin: 1rem;
 }

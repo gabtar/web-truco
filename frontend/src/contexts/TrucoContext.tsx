@@ -1,5 +1,5 @@
 import React, { createContext, useReducer } from 'react';
-import { Game, Card, Message, GameState, Truco, Envido, Player } from '../types';
+import { Game, Card, Message, GameState, Truco, Envido, Player, HandStatus } from '../types';
 import { trucoReducer } from '../reducers/SocketReducer';
 
 export type TrucoStateType = {
@@ -19,6 +19,7 @@ const initialGameState : GameState = {
   players: new Array<Player>(),
   player_turn: '',
   player_hand: '',
+  chant_turn: '',
   player_dealer: '',
   cards_played: new Map<string, Card[]>(),
   cards_dealed: [emptyCard, emptyCard, emptyCard],
@@ -26,6 +27,7 @@ const initialGameState : GameState = {
   winner: '',
   truco_status: Truco.NoCantado,
   envido_status: Envido.NoCantado,
+  status: HandStatus.NOT_STARTED,
   score: new Map<string, number>()
 }
 

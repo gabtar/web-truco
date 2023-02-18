@@ -45,12 +45,14 @@ export const trucoReducer = (state: any, action: any) => {
           player_hand: payload.hand.player_hand,
           player_dealer: payload.hand.player_dealer,
           player_turn: payload.hand.player_turn,
+          chant_turn: payload.hand.chant_turn,
           cards_played: cards_in_hand,
           cards_dealed: payload.hand.cards_dealed,
           rounds: rounds,
           winner: payload.hand.winner,
           truco_status: payload.hand.truco_status,
           envido_status: payload.hand.envido,
+          status: payload.hand.status,
         }
     }
     case 'updateScore':

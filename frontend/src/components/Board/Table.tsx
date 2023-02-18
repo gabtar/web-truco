@@ -6,15 +6,7 @@ function Table() {
     const { state } = useContext(TrucoContext);
     const { game, player } = state;
 
-    // const cardsPlayedByPlayer = (playerId: string) => game.cards_played.get(playerId)?.map((card, index) => 
-    //   <div key={index} className="table-card">
-    //     {card.rank}{card.suit}
-    //   </div>
-    // );
-
-    // Tengo que mapearlos del round ahora
     const cardsPlayedByPlayer = (playerId: string) => game.rounds.map((round, index) =>
-    // TODO si es nula no la renderiza
       round.cards_played.get(playerId) === null ? '' :
       <div key={index} className="table-card">
         {round.cards_played.get(playerId)?.rank}{round.cards_played.get(playerId)?.suit}

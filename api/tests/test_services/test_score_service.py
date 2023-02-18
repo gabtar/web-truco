@@ -1,5 +1,4 @@
 import pytest
-import uuid
 
 from models.models import Score, Hand, Card, Round
 from services.services import ScoreManager
@@ -40,8 +39,8 @@ def test_assing_score(fake_score_repository, fake_hands_repository):
     """ Test the score of a hand is assigned correctly """
     score_manager = ScoreManager(score_repository=fake_score_repository)
     hand = fake_hands_repository.get_by_id(id=0)
+    hand.winner = hand.players[1].id
     score_repository = fake_score_repository
-    print(hand.winner)
 
     score_manager.initialize_score(hand=hand)
     score_manager.assign_score(hand=hand)

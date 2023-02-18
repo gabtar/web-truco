@@ -6,7 +6,6 @@ import { Message } from '../../types';
 import './Chat.css';
 
 
-// TODO en el mensaje agreagar la hora y el nombre del username?
 const displayMessages = (messages: Message[]): ReactNode => {
     return messages.map((message: Message, index) => (
     <div key={index}>

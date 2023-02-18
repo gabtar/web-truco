@@ -1,7 +1,7 @@
 import pytest
 
 from repositories.repository import InMemoryGamesRepository, InMemoryPlayersRepository
-from models.models import Player, Hand, Round
+from models.models import Player, Hand, Round, HandStatus
 
 
 @pytest.fixture()
@@ -41,6 +41,8 @@ def fake_full_hand(fake_players_repository) -> Hand:
     hand.player_dealer = player1.id
     hand.player_hand = player2.id
     hand.player_turn = player2.id
+    hand.chant_turn = player2.id
     hand.players.extend([player1, player2])
+    hand.status = HandStatus.IN_PROGRESS
     hand.rounds = [Round(cards_played={player1.id: None, player2.id: None})]
     return hand

@@ -31,10 +31,10 @@ export type Player = {
 }
 
 export enum Truco {
-  NoCantado = 'NO_CANTADO',
-  Truco = 'TRUCO',
-  ReTruco = 'RETRUCO',
-  ValeCuatro = 'VALE_CUATRO'
+  NoCantado,
+  Truco,
+  ReTruco,
+  ValeCuatro
 }
 
 export enum Envido {
@@ -44,18 +44,27 @@ export enum Envido {
   FaltaEnvido = 'FALTA_ENVIDO'
 }
 
+export enum HandStatus {
+  NOT_STARTED = 'NOT_STARTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  LOCKED = 'LOCKED',
+  FINISHED = 'FINISHED'
+}
+
 export type GameState = {
   id: number,
   players: Player[]
   player_turn: string,
+  chant_turn: string,
   player_hand: string,
   player_dealer: string,
   cards_played: Map<string, Card[]>,
   cards_dealed: Card[],
-  truco_status: Truco,
   rounds: Round[],
-  winner: string,
+  truco_status: Truco,
   envido_status: Envido,
+  status: HandStatus,
+  winner: string,
   // TODO, separar el score de la mano?
   score: Map<string, number>
 }

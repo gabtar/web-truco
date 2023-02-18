@@ -4,7 +4,7 @@ from typing import Dict
 from fastapi.encoders import jsonable_encoder
 from models.models import Hand, Player, Score
 from services.connection_manager import ConnectionManager, dep_connection_manager
-from services.services import HandManager, ScoreManager, PlayerManager
+from services.services import HandManager, ScoreManager, PlayerManager, TrucoManager
 
 
 class SocketController:
@@ -13,18 +13,21 @@ class SocketController:
     _hand_manager: HandManager
     _player_manager: PlayerManager
     _score_manager: ScoreManager
+    _truco_manager: TrucoManager
 
     def __init__(
             self,
             connection_manager: ConnectionManager = dep_connection_manager(),
             hand_manager: HandManager = HandManager(),
             player_manager: PlayerManager = PlayerManager(),
-            score_manager: ScoreManager = ScoreManager()
+            score_manager: ScoreManager = ScoreManager(),
+            truco_manager: TrucoManager = TrucoManager()
             ):
         self._connection_manager = connection_manager
         self._hand_manager = hand_manager
         self._player_manager = player_manager
         self._score_manager = score_manager
+        self._truco_manager = truco_manager
 
     async def call_event(self, event: str, payload: Dict):
         # Calls the method name by the event string passed as argument
@@ -90,7 +93,7 @@ class SocketController:
             hand_status = jsonable_encoder(hand)
             # Manda sólo las cartas del jugador corriente
             hand_status['cards_dealed'] = hand_status['cards_dealed'][player.id]
-            hand_status['winner'] = hand.winner
+            hand_status['winner'] = hand.check_winner
 
             data = json.dumps({
                 "event": "handUpdated",
@@ -154,26 +157,66 @@ class SocketController:
 
         await self.handUpdate(hand_id=hand.id)
 
-        # TODO, Extraer todo a un evento updateScore?
-        # if self._score_manager.hand_winner(hand=hand) is not None:
         if hand.winner is not None:
-            score: Score = self._score_manager.assign_score(hand=hand)
+            await self.updateScore(handId=hand.id)
 
-            data = json.dumps({
-                "event": "updateScore",
-                "payload": {
-                    "score": jsonable_encoder(score)
-                },
-            })
+    async def updateScore(self, handId: int):
+        """ Updates the score in a game to all players
 
-            for player in hand.players:
-                await self._connection_manager.send(json_string=data, player_id=player.id)
+        Args:
+            handId (int): id of the hand to play the card.
+        """
+        hand: Hand = self._hand_manager.get_hand(id=handId)
+        score: Score = self._score_manager.assign_score(hand=hand)
 
-            # TODO, por ahora reinicia toda la mano
-            # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
-            # al que estaba
-            self._hand_manager.initialize_hand(hand_id=hand.id)
-            await self.handUpdate(hand_id=hand.id)
+        data = json.dumps({
+            "event": "updateScore",
+            "payload": {
+                "score": jsonable_encoder(score)
+            },
+        })
+
+        for player in hand.players:
+            await self._connection_manager.send(json_string=data, player_id=player.id)
+
+        # TODO, por ahora reinicia toda la mano
+        # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
+        # al que estaba
+        self._hand_manager.initialize_hand(hand_id=hand.id)
+        await self.handUpdate(hand_id=hand.id)
+
+    async def chantTruco(self, playerId: str, handId: int, level: int):
+        """ Handles the truco status of a hand
+
+        Args:
+            playerId (str): id of the player who is playing the card.
+            handId (int): id of the hand to play the card.
+            level (Truco): the level of the truco chanted/accepted/declined.
+        """
+        hand = self._hand_manager.get_hand(id=handId)
+        self._truco_manager.chant_truco(player_id=playerId, hand_id=handId, level=level)
+
+        await self.handUpdate(hand_id=hand.id)
+
+    async def responseToTruco(self, playerId: str, handId: int, level: int):
+        """ Response to a chantTruco event
+        If level is higher than the actual, it's chanted again to the opponent.
+        If level is the same, then it's accepted.
+        If level is lower than current, then it's declined.
+
+        Args:
+            playerId (str): id of the player who is playing the card.
+            handId (int): id of the hand to play the card.
+            level (Truco): the level of the truco chanted/accepted/declined.
+        """
+        hand = self._hand_manager.get_hand(id=handId)
+        self._truco_manager.response_to_truco(player_id=playerId, hand_id=handId, level=level)
+
+        if hand.winner:
+            await self.updateScore(handId=hand.id)
+            return
+
+        await self.handUpdate(hand_id=hand.id)
 
 
 socket = SocketController()

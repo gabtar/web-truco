@@ -3,7 +3,6 @@ import { TrucoContext } from '../../contexts/TrucoContext';
 import './ScoreBoard.css'
 
 function ScoreBoard() {
-  // TODO, pasar directo por props ya que el padre tiene el score
   const { state } = useContext(TrucoContext);
   const { game } = state;
 

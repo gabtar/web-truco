@@ -80,7 +80,7 @@ def test_no_winner_when_only_one_card_played():
 #       -> Gana el segundo y el tercero
 def test_no_player_wins_when_no_rounds_played(fake_empty_hand):
     """ Test that there is no winner when nobody has placed a card """
-    assert fake_empty_hand.winner is None
+    assert fake_empty_hand.check_winner is None
 
 
 def test_player_one_wins_on_tie_first_round_and_winned_second_round(fake_hand):
@@ -96,7 +96,7 @@ def test_player_one_wins_on_tie_first_round_and_winned_second_round(fake_hand):
     hand.rounds[1].cards_played['player1'] = cards_p1[1]
     hand.rounds[1].cards_played['player2'] = cards_p2[1]
 
-    assert hand.winner == 'player1'
+    assert hand.check_winner == 'player1'
 
 
 def test_two_consecutive_rounds_define_in_third_round(fake_hand):
@@ -114,7 +114,7 @@ def test_two_consecutive_rounds_define_in_third_round(fake_hand):
     hand.rounds[2].cards_played['player1'] = cards_p1[2]
     hand.rounds[2].cards_played['player2'] = cards_p2[2]
 
-    assert hand.winner == 'player1'
+    assert hand.check_winner == 'player1'
 
 
 def test_all_rounds_tied_player_hand_wins(fake_hand):
@@ -130,7 +130,7 @@ def test_all_rounds_tied_player_hand_wins(fake_hand):
     hand.rounds[2].cards_played['player1'] = cards_p1[2]
     hand.rounds[2].cards_played['player2'] = cards_p2[2]
 
-    assert hand.winner == hand.player_hand
+    assert hand.check_winner == hand.player_hand
 
 
 def test_player1_wins_when_wins_first_round_and_second_round_is_tie(fake_hand):
@@ -146,7 +146,7 @@ def test_player1_wins_when_wins_first_round_and_second_round_is_tie(fake_hand):
     hand.rounds[1].cards_played['player1'] = cards_p1[1]
     hand.rounds[1].cards_played['player2'] = cards_p2[1]
 
-    assert hand.winner == 'player1'
+    assert hand.check_winner == 'player1'
 
 
 def test_player1_first_round_loses_second_and_ties_third(fake_hand):
@@ -164,7 +164,7 @@ def test_player1_first_round_loses_second_and_ties_third(fake_hand):
     hand.rounds[1].cards_played['player1'] = cards_p1[2]
     hand.rounds[1].cards_played['player2'] = cards_p2[2]
 
-    assert hand.winner == 'player1'
+    assert hand.check_winner == 'player1'
 
 
 def test_player2_wins_first_and_secound_round(fake_hand):
@@ -178,7 +178,7 @@ def test_player2_wins_first_and_secound_round(fake_hand):
     hand.rounds[1].cards_played['player1'] = cards_p1[1]
     hand.rounds[1].cards_played['player2'] = cards_p2[1]
 
-    assert hand.winner == 'player2'
+    assert hand.check_winner == 'player2'
 
 
 def test_player2_wins_first_and_third_round(fake_hand):
@@ -196,7 +196,7 @@ def test_player2_wins_first_and_third_round(fake_hand):
     hand.rounds[2].cards_played['player1'] = cards_p1[2]
     hand.rounds[2].cards_played['player2'] = cards_p2[2]
 
-    assert hand.winner == 'player2'
+    assert hand.check_winner == 'player2'
 
 
 def test_player1_loses_first_and_wins_second_and_third_round(fake_hand):
@@ -214,4 +214,13 @@ def test_player1_loses_first_and_wins_second_and_third_round(fake_hand):
     hand.rounds[2].cards_played['player1'] = cards_p1[2]
     hand.rounds[2].cards_played['player2'] = cards_p2[2]
 
-    assert hand.winner == 'player1'
+    assert hand.check_winner == 'player1'
+
+
+def test_advances_to_next_player_in_the_players_list(fake_hand):
+    """ Test that the hand updates the turn to the next player on the list """
+    hand: Hand = fake_hand
+    hand.player_turn = hand.players[0].id
+    hand.update_turn_to_next_player
+
+    assert hand.player_turn == 'player2'

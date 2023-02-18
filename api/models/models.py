@@ -91,6 +91,14 @@ class Envido(int, Enum):
     FALTA_ENVIDO = 3
 
 
+class HandStatus(str, Enum):
+    """ The status of a hand """
+    NOT_STARTED = 'NOT_STARTED'
+    IN_PROGRESS = 'IN_PROGRESS'
+    LOCKED = 'LOCKED'
+    FINISHED = 'FINISHED'
+
+
 class Round(BaseModel):
     """ A Round of a hand of truco """
     cards_played: Dict[str, Optional[Card]]
@@ -138,32 +146,22 @@ class Hand(BaseModel):
     name: str = 'Nueva Mano'
     players: List[Player] = []
     player_turn: Optional[str]  # Al jugador que le toca tirar carta
+    chant_turn: Optional[str]  # Al jugador que le toca cantar/aceptar
     player_hand: Optional[str]  # El jugador que es mano
     player_dealer: Optional[str]  # El que reparte la mano
     cards_dealed: Dict[str, List[Card]] = {}
     rounds: List[Round] = []
     truco_status: Truco = Truco.NO_CANTADO
     envido: Envido = Envido.NO_CANTADO
+    winner: Optional[str]
+    status: HandStatus = HandStatus.NOT_STARTED
 
     @property
-    def winner(self) -> Optional[str]:
-        # Reglas ganador de la mano:
-        # -------------------------------------------------
-        # Al mejor de 3 rounds según la carta jugada
-        # Primer round empate -> Gana el que gana el segundo round
-        # Primer round y segundo empate -> Gana el que gana el tercer round
-        # 3 empates -> Gana el que es mano
-        # Gana primer round y empata segundo -> Gana el que ganó el primer round
-        # Gana primer round, pierde segundo y empata tercero -> Gana el que ganó el primer round
-
-        # Recorrer todos los rounds
-        # Contar cada ganador y empates
+    def check_winner(self) -> Optional[str]:
+        """ Determines the winner of the hand according to the rules of Truco """
         round_winner = [round.winner for round in self.rounds]
 
-        # Definir al ganador según las reglas
         # TODO, ojo 'bastante' harcodeado(y para 2 jugadores!) pero pasan los tests
-        # TODO, contar los rounds completos!!!! sino los que no jugaron carta todavía 
-        # los cuenta igual
         if len(self.rounds) > 0 and round_winner[0] is None and self.rounds[0].finished:
             if len(self.rounds) > 1 and round_winner[1] is None and self.rounds[1].finished:
                 if len(self.rounds) > 2 and round_winner[2] is None and self.rounds[2].finished:
@@ -188,6 +186,28 @@ class Hand(BaseModel):
                 if len(self.rounds) > 2:
                     return round_winner[2]
         return None
+
+    @property
+    def update_turn_to_next_player(self):
+        """ Updates turn to next player in the player list """
+        player = [player for player in self.players if player.id == self.player_turn]
+        player_turn_index = self.players.index(player[0])
+
+        if player_turn_index == len(self.players) - 1:
+            self.player_turn = self.players[0].id
+        else:
+            self.player_turn = self.players[player_turn_index + 1].id
+
+    @property
+    def update_chant_turn_to_opponent(self):
+        """ Updates the chant turn to the opponent """
+        player = [player for player in self.players if player.id == self.chant_turn]
+        chant_turn_index = self.players.index(player[0])
+
+        if chant_turn_index == len(self.players) - 1:
+            self.chant_turn = self.players[0].id
+        else:
+            self.chant_turn = self.players[chant_turn_index + 1].id
 
 
 class Score(BaseModel):
