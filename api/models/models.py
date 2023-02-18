@@ -113,10 +113,11 @@ class Round(BaseModel):
 
     @property
     def winner(self) -> Optional[str]:
-        """ Determines the winner of a round of a Hand of truco
+        """ Determines the winner of a round in a Hand of truco
 
         Returns:
-            player(Optional[str]): the id of the player who won the round
+            player(Optional[List[str]]): An string array of the ids of the
+                                        player(s) who won the round
         """
         # Si el round sigue activo, no hay ganador
         if not self.finished:
@@ -125,19 +126,9 @@ class Round(BaseModel):
         # Get the highest card
         highest_value = max([card._value
                              for card in self.cards_played.values()])
-        highest_cards_players = [player
-                                 for player, card in self.cards_played.items()
-                                 if card._value == highest_value]
-
-        # If higest card is unique, return player key
-        if len(highest_cards_players) == 1:
-            return highest_cards_players[0]
-
-        # TODO, ver de plantear la lógica del ganador con esto
-        # -> Si hay empate debería devolver como que ganaron los 2 jugadores?
-        # Así, al mejor de 2 de 3 rounds(puntos) creo que podría funcionar
-        # Ver los casos borde de desempates
-        return None
+        return [player
+                for player, card in self.cards_played.items()
+                if card._value == highest_value]
 
 
 class Hand(BaseModel):
@@ -159,32 +150,28 @@ class Hand(BaseModel):
     @property
     def check_winner(self) -> Optional[str]:
         """ Determines the winner of the hand according to the rules of Truco """
-        round_winner = [round.winner for round in self.rounds]
+        rounds_winned_by_player = {player.id: 0 for player in self.players}
 
-        # TODO, ojo 'bastante' harcodeado(y para 2 jugadores!) pero pasan los tests
-        if len(self.rounds) > 0 and round_winner[0] is None and self.rounds[0].finished:
-            if len(self.rounds) > 1 and round_winner[1] is None and self.rounds[1].finished:
-                if len(self.rounds) > 2 and round_winner[2] is None and self.rounds[2].finished:
-                    return self.player_hand
-                else:
-                    return round_winner[2]
-            elif len(self.rounds) == 1:
-                return round_winner[0]
-            else:
-                return round_winner[1]
-        elif len(self.rounds) > 0 and self.rounds[0].finished:
-            # Alguien ganó el primer round
-            if not self.rounds[1].finished:
-                return None
-            if len(self.rounds) > 1 and round_winner[1] is None:
-                return round_winner[0]
-            else:
-                # Alguien ganó el primer round y el otro ganó el segundo
-                # Define el que gana el tercero
-                if len(self.rounds) > 1 and round_winner[0] == round_winner[1]:
-                    return round_winner[0]
-                if len(self.rounds) > 2:
-                    return round_winner[2]
+        for round in self.rounds:
+            if round.winner is None:
+                continue
+
+            for player_id in round.winner:
+                rounds_winned_by_player[player_id] += 1
+
+        # Si ganó 2 y es unique -> Hay ganador
+        # Si ganó 2 y multiples ganadores define ganador del 3 round
+        # Si ganó 3 y multiples ganadores define el jugador que es mano
+        winned_2_rounds = [player for player, wins in rounds_winned_by_player.items() if wins == 2]
+        winned_3_rounds = [player for player, wins in rounds_winned_by_player.items() if wins == 3]
+
+        if len(winned_2_rounds) == 1 and len(winned_3_rounds) == 0:
+            return winned_2_rounds[0]
+        elif len(winned_3_rounds) == 1:
+            return winned_3_rounds[0]
+        elif len(self.rounds) == 3 and self.rounds[2].winner is not None:
+            return self.player_hand
+
         return None
 
     @property

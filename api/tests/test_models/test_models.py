@@ -32,7 +32,7 @@ def test_player_one_wins():
 
     round = Round(cards_played={'1': as_espadas, '2': as_basto})
 
-    assert round.winner == '1'
+    assert round.winner == ['1']
 
 
 def test_player_two_wins():
@@ -42,7 +42,7 @@ def test_player_two_wins():
 
     round = Round(cards_played={'1': cuatro_copa, '2': tres_oro})
 
-    assert round.winner == '2'
+    assert round.winner == ['2']
 
 
 def test_no_winner_when_equal_value_cards():
@@ -52,7 +52,7 @@ def test_no_winner_when_equal_value_cards():
 
     round = Round(cards_played={'1': cuatro_copa, '2': cuatro_espada})
 
-    assert round.winner is None
+    assert round.winner == ['1', '2']
 
 
 def test_no_winner_when_only_one_card_played():
