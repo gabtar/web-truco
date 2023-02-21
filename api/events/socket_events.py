@@ -1,10 +1,12 @@
 import json
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 from fastapi.encoders import jsonable_encoder
-from models.models import Hand, Player, Score
+from models.models import Hand, Player, Score, Card
 from services.connection_manager import ConnectionManager, dep_connection_manager
-from services.services import HandManager, ScoreManager, PlayerManager, TrucoManager
+from services.services import (
+    HandManager, ScoreManager, PlayerManager, TrucoManager, EnvidoManager
+)
 
 
 class SocketController:
@@ -14,6 +16,7 @@ class SocketController:
     _player_manager: PlayerManager
     _score_manager: ScoreManager
     _truco_manager: TrucoManager
+    _envido_manager: EnvidoManager
 
     def __init__(
             self,
@@ -21,13 +24,15 @@ class SocketController:
             hand_manager: HandManager = HandManager(),
             player_manager: PlayerManager = PlayerManager(),
             score_manager: ScoreManager = ScoreManager(),
-            truco_manager: TrucoManager = TrucoManager()
+            truco_manager: TrucoManager = TrucoManager(),
+            envido_manager: EnvidoManager = EnvidoManager()
             ):
         self._connection_manager = connection_manager
         self._hand_manager = hand_manager
         self._player_manager = player_manager
         self._score_manager = score_manager
         self._truco_manager = truco_manager
+        self._envido_manager = envido_manager
 
     async def call_event(self, event: str, payload: Dict):
         # Calls the method name by the event string passed as argument
@@ -92,7 +97,7 @@ class SocketController:
         for player in hand.players:
             hand_status = jsonable_encoder(hand)
             # Manda sólo las cartas del jugador corriente
-            hand_status['cards_dealed'] = hand_status['cards_dealed'][player.id]
+            hand_status['cards_dealed'] = jsonable_encoder(hand.cards_dealed[player.id]) if hand.status != 'NOT_STARTED' else []
             hand_status['winner'] = hand.check_winner
 
             data = json.dumps({
@@ -166,24 +171,41 @@ class SocketController:
         Args:
             handId (int): id of the hand to play the card.
         """
+        # TODO, por ahora queda todo harcodeado así, mejorar todo
         hand: Hand = self._hand_manager.get_hand(id=handId)
-        score: Score = self._score_manager.assign_score(hand=hand)
 
-        data = json.dumps({
-            "event": "updateScore",
-            "payload": {
-                "score": jsonable_encoder(score)
-            },
-        })
+        if hand.envido.winner is not None and hand.winner is None:
+            # Acutaliza sólo envido
+            score: Score = self._score_manager.assign_envido_score(hand=hand)
 
-        for player in hand.players:
-            await self._connection_manager.send(json_string=data, player_id=player.id)
+            data = json.dumps({
+                "event": "updateScore",
+                "payload": {
+                    "score": jsonable_encoder(score)
+                },
+            })
 
-        # TODO, por ahora reinicia toda la mano
-        # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
-        # al que estaba
-        self._hand_manager.initialize_hand(hand_id=hand.id)
-        await self.handUpdate(hand_id=hand.id)
+            for player in hand.players:
+                await self._connection_manager.send(json_string=data, player_id=player.id)
+
+        else: # Actualiza el score del truco y reinicia la mano
+            score: Score = self._score_manager.assign_truco_score(hand=hand)
+
+            data = json.dumps({
+                "event": "updateScore",
+                "payload": {
+                    "score": jsonable_encoder(score)
+                },
+            })
+
+            for player in hand.players:
+                await self._connection_manager.send(json_string=data, player_id=player.id)
+
+            # TODO, por ahora reinicia toda la mano
+            # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
+            # al que estaba
+            self._hand_manager.initialize_hand(hand_id=hand.id)
+            await self.handUpdate(hand_id=hand.id)
 
     async def chantTruco(self, playerId: str, handId: int, level: int):
         """ Handles the truco status of a hand
@@ -217,6 +239,52 @@ class SocketController:
             return
 
         await self.handUpdate(hand_id=hand.id)
+
+    async def chantEnvido(self, playerId: str, handId: int, level: int):
+        """ Chants envido to the opponent
+
+        Args:
+            playerId (str): id of the player who is playing the card.
+            handId (int): id of the hand to play the card.
+            level (Truco): the level of the truco chanted/accepted/declined.
+        """
+        self._envido_manager.chant_envido(player_id=playerId, hand_id=handId, level=level)
+
+        await self.handUpdate(hand_id=handId)
+
+    async def responseToEnvido(self, playerId: str, handId: int, level: int):
+        """ Response to a envido to the opponent """
+        self._envido_manager.response_to_envido(player_id=playerId, hand_id=handId, level=level)
+
+        await self.handUpdate(hand_id=handId)
+
+    async def acceptEnvido(self, playerId: str, handId: int):
+        """ Accepts an envido play """
+        self._envido_manager.accept_envido(player_id=playerId, hand_id=handId)
+
+        await self.handUpdate(hand_id=handId)
+
+    async def declineEnvido(self, playerId: str, handId: int):
+        """ Declines envido in a Hand of Truco """
+        hand: Hand = self._hand_manager.get_hand(id=handId)
+        self._envido_manager.decline_envido(player_id=playerId, hand_id=handId)
+        # TODO should I also set envido score?
+        if hand.envido.winner is not None:
+            await self.updateScore(handId=hand.id)
+
+        await self.handUpdate(hand_id=handId)
+
+    async def playEnvido(self, playerId: str, handId: int, cards: List):
+        """ Plays the cards for envido """
+        hand: Hand = self._hand_manager.get_hand(id=handId)
+        envido_cards = [Card(**card) for card in cards]
+        self._envido_manager.play_envido(hand_id=handId, player_id=playerId, cards=envido_cards)
+
+        # Si hay ganador, update score y continuar la mano
+        if hand.envido.winner is not None:
+            await self.updateScore(handId=hand.id)
+
+        await self.handUpdate(hand_id=handId)
 
 
 socket = SocketController()

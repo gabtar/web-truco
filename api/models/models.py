@@ -83,12 +83,37 @@ class Truco(int, Enum):
     VALE_CUATRO = 4
 
 
-class Envido(int, Enum):
-    """ Ranges of truco in a Hand """
-    NO_CANTADO = 0
-    ENVIDO = 1
-    REAL_ENVIDO = 2
-    FALTA_ENVIDO = 3
+class EnvidoLevels(int, Enum):
+    """ Ranges of truco in a Hand. The ints represent the points winned when accepted """
+    ENVIDO = 2
+    REAL_ENVIDO = 3
+    FALTA_ENVIDO = 30
+
+
+class EnvidoStatus(str, Enum):
+    """ Status of an envido Play """
+    NOT_STARTED = 'NOT_STARTED'
+    CHANTING = 'CHANTING',
+    ACCEPTED = 'ACCEPTED',
+    FINISHED = 'FINISHED'  # Winned by either declined or by score
+
+
+class Envido(BaseModel):
+    """ Envido during a Hand of truco """
+    chanted: List[EnvidoLevels] = []  # Lista de cantos acumulados. Ej [Envido, Envido, RealEnvido, FaltaEnvido] Para calcular puntaje
+    points: int = 0
+    cards_played: Dict[str, Optional[List[Card]]] = {}
+    winner: Optional[str]
+    status: EnvidoStatus = EnvidoStatus.NOT_STARTED  # Initialized in chant phase
+
+    @property
+    def all_played(self):
+        """ Returns the player_id of the winner """
+        for cards in self.cards_played.values():
+            if cards == []:
+                return False
+
+        return True
 
 
 class HandStatus(str, Enum):
@@ -96,6 +121,7 @@ class HandStatus(str, Enum):
     NOT_STARTED = 'NOT_STARTED'
     IN_PROGRESS = 'IN_PROGRESS'
     LOCKED = 'LOCKED'
+    ENVIDO = 'ENVIDO'
     FINISHED = 'FINISHED'
 
 
@@ -142,8 +168,8 @@ class Hand(BaseModel):
     player_dealer: Optional[str]  # El que reparte la mano
     cards_dealed: Dict[str, List[Card]] = {}
     rounds: List[Round] = []
+    envido: Envido = Envido()
     truco_status: Truco = Truco.NO_CANTADO
-    envido: Envido = Envido.NO_CANTADO
     winner: Optional[str]
     status: HandStatus = HandStatus.NOT_STARTED
 
@@ -195,6 +221,7 @@ class Hand(BaseModel):
             self.chant_turn = self.players[0].id
         else:
             self.chant_turn = self.players[chant_turn_index + 1].id
+
 
 
 class Score(BaseModel):

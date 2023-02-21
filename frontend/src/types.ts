@@ -37,18 +37,34 @@ export enum Truco {
   ValeCuatro
 }
 
-export enum Envido {
-  NoCantado = 'NO_CANTADO',
-  Envido = 'ENVIDO',
-  RealEnvido = 'REAL_ENVIDO',
-  FaltaEnvido = 'FALTA_ENVIDO'
+export enum EnvidoLevels {
+  // Valores 'mapeados' al enum de pydantic en el backend
+  Envido = 2,
+  RealEnvido = 3,
+  FaltaEnvido = 30
+}
+
+export enum EnvidoStatus {
+  NOT_STARTED = 'NOT_STARTED',
+  CHANTING = 'CHANTING',
+  ACCEPTED = 'ACCEPTED',
+  FINISHED = 'FINISHED'
 }
 
 export enum HandStatus {
   NOT_STARTED = 'NOT_STARTED',
   IN_PROGRESS = 'IN_PROGRESS',
   LOCKED = 'LOCKED',
+  ENVIDO = 'ENVIDO',
   FINISHED = 'FINISHED'
+}
+
+export type Envido = {
+  chanted: string[],
+  points: number,
+  cards_played: Map<string, Card[]>,
+  winner: string,
+  status: EnvidoStatus
 }
 
 export type GameState = {
@@ -61,8 +77,8 @@ export type GameState = {
   cards_played: Map<string, Card[]>,
   cards_dealed: Card[],
   rounds: Round[],
+  envido: Envido,
   truco_status: Truco,
-  envido_status: Envido,
   status: HandStatus,
   winner: string,
   // TODO, separar el score de la mano?

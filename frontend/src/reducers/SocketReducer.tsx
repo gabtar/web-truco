@@ -49,9 +49,9 @@ export const trucoReducer = (state: any, action: any) => {
           cards_played: cards_in_hand,
           cards_dealed: payload.hand.cards_dealed,
           rounds: rounds,
+          envido: payload.hand.envido,
           winner: payload.hand.winner,
           truco_status: payload.hand.truco_status,
-          envido_status: payload.hand.envido,
           status: payload.hand.status,
         }
     }

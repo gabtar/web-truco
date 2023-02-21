@@ -2,7 +2,8 @@ import random
 
 from typing import List, Dict, Optional
 from models.models import (
-    Hand, Suit, Rank, Card, Score, Player, Round, Truco, HandStatus, Envido
+    Hand, Suit, Rank, Card, Score, Player, Round, Truco, HandStatus,
+    EnvidoLevels, Envido, EnvidoStatus
 )
 from repositories.repository import (
         AbstractHandRepository, dep_games_repository,
@@ -89,11 +90,8 @@ class HandManager:
         if hand.status != HandStatus.IN_PROGRESS:
             raise GameException('Acción inválidad')
 
-        # Juega la carta y la elimina de las cartas en mano
-        hand.cards_dealed[player_id].remove(card)
+        # Juega la carta y actualiza los turnos
         hand.rounds[-1].cards_played[player_id] = card
-
-        # Actualiza los turnos de jugada y canto al siguiente jugador
         hand.update_turn_to_next_player
         hand.chant_turn = hand.player_turn
 
@@ -104,7 +102,6 @@ class HandManager:
                 round_finished = False
 
         if round_finished and len(hand.rounds) < 3:
-            # Crea el nuevo round!
             cards_played = {player.id: None for player in hand.players}
             hand.rounds.append(Round(cards_played=cards_played))
 
@@ -161,8 +158,8 @@ class HandManager:
         hand.rounds = [Round(cards_played=cards_played)]
         hand.status = HandStatus.NOT_STARTED
         hand.truco_status = Truco.NO_CANTADO
-        hand.envido = Envido.NO_CANTADO
         hand.winner = None
+        hand.envido = Envido()
 
         self.hand_repository.update(hand)
 
@@ -223,6 +220,115 @@ class TrucoManager:
         self._hand_repository.update(hand)
 
 
+class EnvidoManager:
+    """ Handles the envido status during a Hand of truco """
+    _hand_repository: AbstractHandRepository
+
+    def __init__(self, hands: AbstractHandRepository = dep_games_repository()):
+        self._hand_repository = hands
+
+    def chant_envido(self, hand_id: int, player_id: str, level: EnvidoLevels):
+        """ Chants envido to the opponent player """
+        hand: Hand = self._hand_repository.get_by_id(id=hand_id)
+
+        if len(hand.rounds) > 0 and hand.rounds[0].finished:
+            raise GameException('No se puede cantar después de la primera ronda')
+
+        if hand.chant_turn != player_id:
+            raise GameException('No es tu turno')
+
+        hand.envido.cards_played = {player.id: [] for player in hand.players}
+        hand.envido.chanted.append(level)
+        hand.envido.status = EnvidoStatus.CHANTING
+
+        hand.status = HandStatus.ENVIDO
+        hand.update_chant_turn_to_opponent
+        self._hand_repository.update(hand)
+
+    def response_to_envido(self, hand_id: int, player_id: str, level: EnvidoLevels):
+        """ Responses to an envido chant """
+        hand: Hand = self._hand_repository.get_by_id(id=hand_id)
+
+        if hand.chant_turn != player_id:
+            raise GameException('No es tu turno')
+
+        if hand.envido.chanted[-1] != EnvidoLevels.ENVIDO and level <= hand.envido.chanted[-1]:
+            raise GameException('No se puede cantar un nivel inferior')
+
+        hand.envido.chanted.append(level)
+        hand.update_chant_turn_to_opponent
+        self._hand_repository.update(hand)
+
+    def accept_envido(self, hand_id: int, player_id: str):
+        """ Accepts chant/current level of envido and sets the points to win"""
+        hand: Hand = self._hand_repository.get_by_id(id=hand_id)
+
+        if hand.chant_turn != player_id:
+            raise GameException('No es tu turno')
+
+        for level in hand.envido.chanted:
+            hand.envido.points += level
+
+        # Usar el chant turn para cantar la jugada/cartas luego
+        hand.envido.status = EnvidoStatus.ACCEPTED
+        hand.update_chant_turn_to_opponent
+        self._hand_repository.update(hand)
+
+    def decline_envido(self, hand_id: int, player_id: str):
+        """ Declines the current envido levels(s) sets the points and the winner """
+        hand: Hand = self._hand_repository.get_by_id(id=hand_id)
+
+        if hand.chant_turn != player_id:
+            raise GameException('No es tu turno')
+
+        for level in hand.envido.chanted[:-1]:
+            hand.envido.points += level
+        hand.envido.points += 1  # El que no fue aceptado
+
+        hand.update_chant_turn_to_opponent
+        hand.envido.winner = hand.chant_turn
+        hand.envido.status = EnvidoStatus.FINISHED
+        hand.status = HandStatus.IN_PROGRESS  # Reanuda la mano
+        self._hand_repository.update(hand)
+
+    def play_envido(self, hand_id: int, player_id: str, cards: List[Card]):
+        """ Plays cards during envido """
+        hand: Hand = self._hand_repository.get_by_id(id=hand_id)
+
+        # TODO, Faltan validaciones, si tiene las cartas, etc
+        hand.envido.cards_played[player_id] = cards
+        hand.update_chant_turn_to_opponent
+
+        # Verificar ganador
+        if hand.envido.all_played:
+            envido_scores = {
+                    player: self._calculate_envido(hand.envido.cards_played[player])
+                    for player in hand.envido.cards_played.keys()
+            }
+            highest_score = max(envido_scores.values())
+            winner = [player for player, score in envido_scores.items() if score == highest_score]
+
+            if len(winner) == 1:
+                hand.envido.winner = winner[0]
+            else:
+                hand.envido.winner = hand.player_hand
+
+            hand.envido.status = EnvidoStatus.FINISHED
+            hand.status = HandStatus.IN_PROGRESS # Continúa la mano para jugar cartas
+
+        self._hand_repository.update(hand)
+
+    def _calculate_envido(self, cards: List[Card]):
+        """ Calculates the envido value for the cards passed """
+        if len(cards) == 2:
+            score = 20
+            for card in cards:
+                score += int(card.rank) if int(card.rank) < 10 else 0
+            return score
+        else:
+            return int(cards[0].rank) if int(cards[0].rank) < 10 else 0
+
+
 class ScoreManager:
     """ Manages scores of hands of truco """
     score_repository: AbstractScoreRepository
@@ -237,19 +343,24 @@ class ScoreManager:
         self.score_repository.get_by_id(id=hand_id)
 
     def initialize_score(self, hand: Hand) -> None:
-        print(hand)
         score: Score = Score()
         score.id = hand.id
         for player in hand.players:
             score.score[player.id] = 0
         self.score_repository.save(score)
-        print(self.score_repository._scores)
 
-    def assign_score(self, hand: Hand) -> Score:
+    def assign_truco_score(self, hand: Hand) -> Score:
         """ Assigns the score the the passed hand """
         score: Score = self.score_repository.get_by_id(id=hand.id)
         score.score[hand.winner] += hand.truco_status
-        # TODO asignar score del envido
+
+        self.score_repository.update(score)
+        return score
+
+    def assign_envido_score(self, hand: Hand) -> Score:
+        """ Assigns the score of the envido of the passed hand """
+        score: Score = self.score_repository.get_by_id(id=hand.id)
+        score.score[hand.envido.winner] += hand.envido.points
 
         self.score_repository.update(score)
         return score

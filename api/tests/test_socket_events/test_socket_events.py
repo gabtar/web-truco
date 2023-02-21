@@ -69,12 +69,19 @@ async def test_hand_update(mock_connection_manager, fake_players_repository, fak
         "payload": {
             "hand": {
                 'id': 0, 'name': 'Nueva Mano',
-                'players': [{'id': '1', 'name': 'Anónimo'}, {'id': '2', 'name': 'Anónimo'}],
+                'players': [
+                    {'id': '1', 'name': 'Anónimo'},
+                    {'id': '2', 'name': 'Anónimo'}
+                ],
                 'player_turn': '2', 'chant_turn': '2', 'player_hand': '2',
                 'player_dealer': '1', 'cards_dealed': [],
                 'rounds': [{"cards_played": {"1": None, "2": None}}],
-                'truco_status': 1, 'envido': 0,
-                'winner': None,
+                'envido': {
+                    "chanted": [], "points": 0,
+                    "cards_played": {}, "winner": None,
+                    "status": "NOT_STARTED"
+                },
+                'truco_status': 1, 'winner': None,
                 'status': 'IN_PROGRESS',
                 }
             }

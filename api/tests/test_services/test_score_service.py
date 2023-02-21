@@ -43,7 +43,7 @@ def test_assing_score(fake_score_repository, fake_hands_repository):
     score_repository = fake_score_repository
 
     score_manager.initialize_score(hand=hand)
-    score_manager.assign_score(hand=hand)
+    score_manager.assign_truco_score(hand=hand)
 
     hand_score: Score = score_repository.get_by_id(id=hand.id)
 

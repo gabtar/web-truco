@@ -13,12 +13,14 @@ Juego de Truco Argentino usando websockets
 - [x] Mejorar el socketController
 - [x] Tests a los eventos del websocket/socketControler que devuelva los json
 - [x] Reiniciar la mano cuando hay ganador
-- [ ] Refactorizar lógica del ganador de la mano
+- [x] Refactorizar lógica del ganador de la mano
 - [x] Si ya hay ganador que no se puedan jugar más cartas
 - [x] Agregar niveles de truco / cantar truco
-- [ ] Agregar envido
-- [ ] Funcionalidad para ir al mazo
-- [ ] Notificar eventos de la partida por el socket
+- [x] Agregar envido
+- [ ] Más tests/validaciones, sobretodo al envido....
+- [ ] Funcionalidad para ir al mazo durante la partida
+- [ ] Notificar eventos de la partida por el socket (Ej Jugador 1 Gana el Envido/Canta x puntos)
+- [ ] Mejorar el tema del score
 - [ ] Agregar la lógica para determinar de quién es el siguiente turno. (ej si es parda juega el que empardó, etc)
 - [ ] Armar modelo de toda una partida/juego
 
@@ -33,6 +35,7 @@ Juego de Truco Argentino usando websockets
 - [x] Mejorar jugabilidad/ Deshabilitar cartas al jugar
 - [ ] Tipos en el reducer/generalizar acciones
 - [x] Jugar la carta durante la partida y mostrar al oponente
+- [ ] Mejorar el componente del envido/extraer a otros componentes/y mejoras en css
 - [ ] Cambiar favicon! de react.
 - [ ] Notificar por alert cuando finaliza la mano/gana un jugador/canta truco
 - [ ] Ver el tema del routeo a la partida, hay un error en la consola js
@@ -48,4 +51,5 @@ Juego de Truco Argentino usando websockets
 
 ### Roadmap v0.1
 - [x] Implementar truco
-- [ ] Implementar envido
+- [x] Implementar envido
+- [ ] Jugar hasta 15 puntos
