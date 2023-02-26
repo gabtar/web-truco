@@ -43,6 +43,5 @@ async def websocket_truco(
     except WebSocketDisconnect:
         # TODO end the game, set a winner if user was playing a game
         # Notify all users
-        # socketControler["endgame"](game_id)
         manager.disconnect(websocket)
         print("LOGGER:: User disconected")

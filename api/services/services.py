@@ -105,7 +105,6 @@ class HandManager:
             cards_played = {player.id: None for player in hand.players}
             hand.rounds.append(Round(cards_played=cards_played))
 
-        # Verificación del ganador
         if hand.check_winner:
             hand.winner = hand.check_winner
 
@@ -182,6 +181,9 @@ class TrucoManager:
         """ Chants truco to the opponent player """
         hand: Hand = self._hand_repository.get_by_id(id=hand_id)
 
+        if hand.status == HandStatus.NOT_STARTED:
+            raise GameException('Deben repartirse las cartas primero')
+
         if hand.chant_turn != player_id:
             raise GameException('No es tu turno')
 
@@ -231,8 +233,14 @@ class EnvidoManager:
         """ Chants envido to the opponent player """
         hand: Hand = self._hand_repository.get_by_id(id=hand_id)
 
+        if hand.status == HandStatus.NOT_STARTED:
+            raise GameException('Deben repartirse las cartas primero')
+
         if len(hand.rounds) > 0 and hand.rounds[0].finished:
             raise GameException('No se puede cantar después de la primera ronda')
+
+        if hand.envido.status == EnvidoStatus.FINISHED:
+            raise GameException('El envido ya ha finalizado')
 
         if hand.chant_turn != player_id:
             raise GameException('No es tu turno')

@@ -29,6 +29,11 @@
   transform: scale(1.02);
 }
 
+.spanish-card.selected {
+  box-shadow: 0 0 5px 3px var(--yellow);
+  transform: none;
+}
+
 .table {
   background-color: var(--green);
   padding: .5rem;

@@ -145,11 +145,9 @@ class Round(BaseModel):
             player(Optional[List[str]]): An string array of the ids of the
                                         player(s) who won the round
         """
-        # Si el round sigue activo, no hay ganador
         if not self.finished:
             return None
 
-        # Get the highest card
         highest_value = max([card._value
                              for card in self.cards_played.values()])
         return [player

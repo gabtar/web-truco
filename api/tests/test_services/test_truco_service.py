@@ -115,3 +115,18 @@ def test_chant_again_in_response_to_truco(fake_hands_repository, fake_full_hand)
     assert hand.truco_status == Truco.RETRUCO
     assert hand.chant_turn == hand.players[1].id
     assert hand.player_turn == hand.players[1].id  # El turno sigue siendo del jugador original
+
+
+def test_cannot_chant_when_cards_are_not_dealed(fake_hands_repository, fake_full_hand):
+    """ Test that a player cannot chant if cards are not dealed """
+    hand: Hand = fake_full_hand
+    hand.status = HandStatus.NOT_STARTED
+    hands_repository = fake_hands_repository
+    hands_repository.save(hand)
+    truco_manager = TrucoManager(hands_repository)
+
+    with pytest.raises(GameException) as excep:
+        truco_manager.chant_truco(hand_id=hand.id, player_id=hand.player_turn, level=Truco.TRUCO)
+
+    assert 'Deben repartirse las cartas primero' in str(excep)
+

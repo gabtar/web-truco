@@ -12,6 +12,7 @@ def fake_hand():
     player2 = Player()
     player2.id = 'player2'
     hand.players = [player1, player2]
+    hand.status = HandStatus.ENVIDO
 
     hand.player_hand = 'player2'
     hand.player_turn = 'player1'
@@ -273,12 +274,66 @@ def test_if_both_players_have_equal_score_the_hand_player_wins(
     assert hand.envido.winner == hand.player_hand
 
 
+def test_envido_cannot_be_chanted_again_if_it_was_already_played_on_the_first_round(
+        fake_hands_repository, fake_hand
+        ):
+    """ Tests that envido cannot be chanted again if it was already played in 
+        the hand
+    """
+    hand: Hand = fake_hand
+    hands_repository = fake_hands_repository
+    hands_repository.save(hand)
+    player1 = hand.players[0].id
+    player2 = hand.players[1].id
+
+    envido_manager = EnvidoManager(hands_repository)
+
+    envido_manager.chant_envido(hand_id=hand.id, player_id=player1, level=EnvidoLevels.REAL_ENVIDO)
+    envido_manager.accept_envido(hand_id=hand.id, player_id=player2)
+
+    envido_manager.play_envido(
+            hand_id=hand.id,
+            player_id=player1,
+            # 29
+            cards=[Card(suit='E', rank='5'), Card(suit='E', rank='4')]
+    )
+    envido_manager.play_envido(
+            hand_id=hand.id,
+            player_id=player2,
+            # 29
+            cards=[Card(suit='B', rank='5'), Card(suit='B', rank='4')]
+    )
+
+    with pytest.raises(GameException) as excep:
+        envido_manager.chant_envido(hand_id=hand.id, player_id=player1, level=EnvidoLevels.FALTA_ENVIDO)
+
+    assert 'El envido ya ha finalizado' in str(excep)
+
+
+
+def test_cannot_chant_envido_when_cards_were_not_yet_dealed(
+        fake_hands_repository, fake_hand
+        ):
+    """ Tests that envido cannot be chanted when no cards dealed
+    """
+    hand: Hand = fake_hand
+    hand.status = HandStatus.NOT_STARTED
+    hands_repository = fake_hands_repository
+    hands_repository.save(hand)
+    player1 = hand.players[0].id
+    player2 = hand.players[1].id
+    envido_manager = EnvidoManager(hands_repository)
+    with pytest.raises(GameException) as excep:
+        envido_manager.chant_envido(hand_id=hand.id, player_id=player1, level=EnvidoLevels.ENVIDO)
+
+    assert 'Deben repartirse las cartas primero' in str(excep)
+
+
 # TODO, Casos de prueba
-# Cantar el nivel de envido                                                  ✓
-# Sólo se puede cantar sobre el primer round                                 ✓
-# No se puede cantar si no tiene el turno                                    ✓
-# No se puede cantar si ya fue cantado/ya fué jugado
 # No se puede cantar si ya se cantó el truco!
+# -> Ojo en realidad si primeron canta uno truco le podes recantar el envido esta primero
+#    y luego de jugar el envido tiene que contestar el canto del truco
+# Si la partida no ha iniciado no se puede cantar
 # No se puede cantar niveles inferiores al actual -> Cuando se responde      ✓
 # Se acumula el puntaje de sucesivos niveles del envido                      ✓
 # Aceptar/Declinar el envido y setea el puntaje y ganador(si declina)        ✓

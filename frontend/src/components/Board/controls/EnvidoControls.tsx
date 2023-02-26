@@ -1,36 +1,14 @@
-import { useState } from 'react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
-import { HandStatus, EnvidoLevels, EnvidoStatus, Card } from '../../../types';
+import { HandStatus, EnvidoLevels, EnvidoStatus } from '../../../types';
 
 // TODO, Crear interfaz para tipos en vez de any
-export default function EnvidoControls({ game, player }: any) {
+export default function EnvidoControls({ game, player, selectedCards, envidoValue }: any) {
 
   const socket = useWebSocket();
 
-  // Durante el envido aceptado
-  const [selectedCards, setSelectedCards] = useState<Card[]>();
-  const [envidoValue, setEnvidoValue] = useState<number>(0);
-
-  const handleSelectEnvidoCards = (card: Card) => {
-    // Veo si hay alguna carta seleccionada
-    // TODO Le aplica el css para highlight/border seleccionado
-    // Si es != y igual palo -> suma +20. Sino cambia la selección
-    let envidoCardValue = Number(card.rank) < 10 ? Number(card.rank) : 0;
-
-    if (selectedCards?.length === 1 && selectedCards[0].suit === card.suit && selectedCards[0] !== card) {
-      // Agrega la carta a la seleccion y suma +20
-      setSelectedCards([...selectedCards, card]);
-      setEnvidoValue(envidoValue + envidoCardValue + 20);
-      return;
-    }
-    //setea la carta y calcula valor envido
-    setSelectedCards([card]);
-    setEnvidoValue(envidoCardValue);
-  }
-
   const isChantTurn = game.chant_turn === player.id ? true : false;
   const isChanting = game.envido?.status === EnvidoStatus.CHANTING ? true : false; // Si ya ha sido cantado
-  const isNotStarted = game.envido.status === EnvidoStatus.NOT_STARTED ? true : false;
+  const isInProgress = game.status === HandStatus.IN_PROGRESS ? true : false;
 
   const isEnvido = game.status === HandStatus.ENVIDO ? true : false;
 
@@ -65,7 +43,7 @@ export default function EnvidoControls({ game, player }: any) {
 
   return (
     <div>
-      {isChanting || isNotStarted ?
+      {isChanting || isInProgress ?
         <>
           Cantado: {game.envido.chanted.map(
             (level: number, index: number) => <span key={index}> {EnvidoLevels[level]} </span>)
@@ -101,13 +79,6 @@ export default function EnvidoControls({ game, player }: any) {
         <div>
           Cantar:
           Clickea sobre las cartas y envía
-          {game.cards_dealed.map((card: Card, index: number) =>
-            <button key={index} className="spanish-card"
-              onClick={() => handleSelectEnvidoCards(card)}
-            >
-              {card.rank}{card.suit}
-            </button>
-          )}
           <button className="btn" onClick={handlePlayEnvido}>
             Enviar {envidoValue}
           </button>

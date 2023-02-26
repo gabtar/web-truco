@@ -1,5 +1,5 @@
 import React, { createContext, useReducer } from 'react';
-import { Game, Card, Message, GameState, Truco, Envido, EnvidoLevels, EnvidoStatus, Player, HandStatus } from '../types';
+import { Game, Card, Message, GameState, Truco, Envido, EnvidoStatus, Player, HandStatus } from '../types';
 import { trucoReducer } from '../reducers/SocketReducer';
 
 export type TrucoStateType = {
