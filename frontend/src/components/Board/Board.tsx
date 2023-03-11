@@ -15,6 +15,7 @@ function Board() {
   const socket = useWebSocket();
   const { state } = useContext(TrucoContext);
   const { game, player } = state;
+  const hand = game.current_hand;
 
   const [selectedCards, setSelectedCards] = useState<Card[]>();
   const [envidoValue, setEnvidoValue] = useState<number>(0);
@@ -43,7 +44,7 @@ function Board() {
 
   const handleChantTruco = () => socket.send(JSON.stringify({
     event: "chantTruco",
-    payload: { playerId: player.id, handId: game.id, level: game.truco_status + 1 }
+    payload: { playerId: player.id, handId: game.id, level: hand.truco_status + 1 }
   }));
 
   const handleClickCard = (card: Card) => {
@@ -54,16 +55,17 @@ function Board() {
     }
   };
 
-  const isEnvido = game.envido.status === 'ACCEPTED';
-  const isPlayerTurn = game.player_turn === player.id ? true : false;
-  const isChantTurn = game.chant_turn === player.id ? true : false;
-  const canDeal = game.player_dealer === player.id && game.status === 'NOT_STARTED' ? true : false;
-  const isFinished = game.status === HandStatus.FINISHED ? true : false;
-  const isNotStarted = game.status === HandStatus.NOT_STARTED ? true : false;
-  const isLocked = game.status === HandStatus.LOCKED ? true : false;
+  const isEnvido = hand.envido.status === 'ACCEPTED';
+  const isPlayerTurn = hand.player_turn === player.id ? true : false;
+  const isChantTurn = hand.chant_turn === player.id ? true : false;
+  const canDeal = hand.player_dealer === player.id && hand.status === 'NOT_STARTED' ? true : false;
+  const isFinished = hand.winner !== '' ? false : true;
+  const isNotStarted = hand.status === HandStatus.NOT_STARTED ? true : false;
+  const isLocked = hand.status === HandStatus.LOCKED ? true : false;
+  const envidoAvailable = !hand.envido.winner && hand.rounds.length === 1
 
   const cardAlreadyPlayed = (card: Card) => {
-    return game.rounds.map(
+    return hand.rounds.map(
       (round) => round.cards_played.get(player.id)
     ).filter(
       (card_played) =>
@@ -75,14 +77,14 @@ function Board() {
 
   const isCardDisabled = (card: Card): boolean => isEnvido ? !isChantTurn : (!isPlayerTurn || cardAlreadyPlayed(card));
 
-  const cardsDealed = game.cards_dealed.map((card: Card, index: number) =>
+  const cardsDealed = hand.cards_dealed.map((card: Card, index: number) =>
     <button key={index} className={selectedCards?.includes(card) ? "spanish-card selected" : "spanish-card"} disabled={isCardDisabled(card)} onClick={() => handleClickCard(card)}>{card.rank}{card.suit}</button>
   );
 
   return (
     <>
       <div className="game-status">
-        {isFinished ? <h3>Ganador: {game.winner} </h3> : ''}
+        {isFinished ? <h3>Ganador: {hand.winner} </h3> : ''}
         <div className="table">
           <Table />
         </div>
@@ -96,13 +98,18 @@ function Board() {
       <div>
         {canDeal ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : ''}
 
-        <EnvidoControls game={game} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
+        {envidoAvailable ?
+          <EnvidoControls hand={hand} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
+          :
+          ''
+        }
 
-        <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || isNotStarted} onClick={handleChantTruco}>Cantar {Truco[game.truco_status]}</button>
+
+        <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || isNotStarted} onClick={handleChantTruco}>Cantar {Truco[hand.truco_status]}</button>
         <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || !isPlayerTurn || isNotStarted}>Cantar Flor</button>
 
         {isLocked ?
-          <TrucoControls game={game} player={player} />
+          <TrucoControls hand={hand} player={player} />
           :
           ''
         }

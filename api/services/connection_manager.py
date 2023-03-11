@@ -1,7 +1,7 @@
 import json
 
 from fastapi import WebSocket
-from services.services import PlayerManager
+from services.player_manager import PlayerManager
 from repositories.repository import dep_players_repository
 
 

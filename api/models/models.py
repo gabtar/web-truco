@@ -157,9 +157,7 @@ class Round(BaseModel):
 
 class Hand(BaseModel):
     """ A hand of truco """
-    id: Optional[int]
-    name: str = 'Nueva Mano'
-    players: List[Player] = []
+    id: Optional[str]
     player_turn: Optional[str]  # Al jugador que le toca tirar carta
     chant_turn: Optional[str]  # Al jugador que le toca cantar/aceptar
     player_hand: Optional[str]  # El jugador que es mano
@@ -174,14 +172,17 @@ class Hand(BaseModel):
     @property
     def check_winner(self) -> Optional[str]:
         """ Determines the winner of the hand according to the rules of Truco """
-        rounds_winned_by_player = {player.id: 0 for player in self.players}
+        rounds_winned_by_player = {}
 
         for round in self.rounds:
             if round.winner is None:
                 continue
 
             for player_id in round.winner:
-                rounds_winned_by_player[player_id] += 1
+                if player_id in rounds_winned_by_player:
+                    rounds_winned_by_player[player_id] += 1
+                else:
+                    rounds_winned_by_player[player_id] = 1
 
         # Si ganó 2 y es unique -> Hay ganador
         # Si ganó 2 y multiples ganadores define ganador del 3 round
@@ -198,32 +199,19 @@ class Hand(BaseModel):
 
         return None
 
-    @property
-    def update_turn_to_next_player(self):
-        """ Updates turn to next player in the player list """
-        player = [player for player in self.players if player.id == self.player_turn]
-        player_turn_index = self.players.index(player[0])
-
-        if player_turn_index == len(self.players) - 1:
-            self.player_turn = self.players[0].id
-        else:
-            self.player_turn = self.players[player_turn_index + 1].id
-
-    @property
-    def update_chant_turn_to_opponent(self):
-        """ Updates the chant turn to the opponent """
-        player = [player for player in self.players if player.id == self.chant_turn]
-        chant_turn_index = self.players.index(player[0])
-
-        if chant_turn_index == len(self.players) - 1:
-            self.chant_turn = self.players[0].id
-        else:
-            self.chant_turn = self.players[chant_turn_index + 1].id
-
-
 
 class Score(BaseModel):
     """ Score of a truco game """
     id: Optional[int]  # El id de la partida
     # NOTA, Siempre van a ser 2 ya sea los jugadores o equipos
     score: Optional[Dict[str, int]] = {} # Por ahora queda con el id del jugador y puntaje
+
+
+class Game(BaseModel):
+    """ A game of truco """
+    id: Optional[str] # uuid?
+    name: str = 'Nueva partida'
+    players: List[Player] = []
+    current_hand: Optional[Hand]
+    score: Optional[Score]
+    rules: int  # Cantidad de juadores por ahora. Mas adelante puede ser un dict con reglas

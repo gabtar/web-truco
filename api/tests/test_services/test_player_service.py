@@ -1,7 +1,7 @@
 import pytest
 
 from models.models import Player
-from services.services import PlayerManager
+from services.player_manager import PlayerManager
 from repositories.repository import InMemoryPlayersRepository
 
 

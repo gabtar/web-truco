@@ -20,6 +20,14 @@ export const trucoReducer = (state: any, action: any) => {
       window.dispatchEvent(navEvent);
 
       return { ...state };
+    case 'gameUpdate':
+      return { ...state,
+        game: { ...state.game,
+          id: payload.game.id,
+          players: payload.game.players,
+        }
+      };
+
     case 'handUpdated':
       // Mapeo a la estructura de cartas en mesa
       const cards_in_hand = new Map<string, Card>();
@@ -38,21 +46,22 @@ export const trucoReducer = (state: any, action: any) => {
       }
 
       return { ...state,
-        game: { ...state.game, 
-          id: payload.hand.id,
-          name: payload.hand.name,
-          players: payload.hand.players,
-          player_hand: payload.hand.player_hand,
-          player_dealer: payload.hand.player_dealer,
-          player_turn: payload.hand.player_turn,
-          chant_turn: payload.hand.chant_turn,
-          cards_played: cards_in_hand,
-          cards_dealed: payload.hand.cards_dealed,
-          rounds: rounds,
-          envido: payload.hand.envido,
-          winner: payload.hand.winner,
-          truco_status: payload.hand.truco_status,
-          status: payload.hand.status,
+        game: { ...state.game,
+          current_hand: { ...state.game, 
+            id: payload.hand.id,
+            name: payload.hand.name,
+            player_hand: payload.hand.player_hand,
+            player_dealer: payload.hand.player_dealer,
+            player_turn: payload.hand.player_turn,
+            chant_turn: payload.hand.chant_turn,
+            cards_played: cards_in_hand,
+            cards_dealed: payload.hand.cards_dealed,
+            rounds: rounds,
+            envido: payload.hand.envido,
+            winner: payload.hand.winner,
+            truco_status: payload.hand.truco_status,
+            status: payload.hand.status,
+          }
         }
     }
     case 'updateScore':

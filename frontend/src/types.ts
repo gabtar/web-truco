@@ -4,8 +4,9 @@ export interface Card {
   rank: string
 }
 
+/* For displaying the available games list */
 export interface Game {
-  id: number,
+  id: string,
   name: string,
   currentPlayers: number
 }
@@ -38,7 +39,6 @@ export enum Truco {
 }
 
 export enum EnvidoLevels {
-  // Valores 'mapeados' al enum de pydantic en el backend
   Envido = 2,
   RealEnvido = 3,
   FaltaEnvido = 30
@@ -67,9 +67,8 @@ export type Envido = {
   status: EnvidoStatus
 }
 
-export type GameState = {
-  id: number,
-  players: Player[]
+export type HandState = {
+  id: string,
   player_turn: string,
   chant_turn: string,
   player_hand: string,
@@ -82,6 +81,12 @@ export type GameState = {
   status: HandStatus,
   winner: string,
   // TODO, separar el score de la mano?
+}
+
+export type GameState = {
+  id: string,
+  players: Player[],
+  current_hand: HandState,
   score: Map<string, number>
 }
 

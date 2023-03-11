@@ -2,50 +2,50 @@ import { useWebSocket } from '../../../hooks/useWebSocket';
 import { HandStatus, EnvidoLevels, EnvidoStatus } from '../../../types';
 
 // TODO, Crear interfaz para tipos en vez de any
-export default function EnvidoControls({ game, player, selectedCards, envidoValue }: any) {
+export default function EnvidoControls({ hand, player, selectedCards, envidoValue }: any) {
 
   const socket = useWebSocket();
 
-  const isChantTurn = game.chant_turn === player.id ? true : false;
-  const isChanting = game.envido?.status === EnvidoStatus.CHANTING ? true : false; // Si ya ha sido cantado
-  const isInProgress = game.status === HandStatus.IN_PROGRESS ? true : false;
+  const isChantTurn = hand.chant_turn === player.id ? true : false;
+  const isChanting = hand.envido?.status === EnvidoStatus.CHANTING ? true : false; // Si ya ha sido cantado
+  const isInProgress = hand.status === HandStatus.IN_PROGRESS ? true : false;
 
-  const isEnvido = game.status === HandStatus.ENVIDO ? true : false;
+  const isEnvido = hand.status === HandStatus.ENVIDO ? true : false;
 
   const isDisabled = !isEnvido || !isChantTurn;
 
   const handlePlayEnvido = () => socket.send(JSON.stringify({
     event: "playEnvido",
-    payload: { playerId: player.id, handId: game.id, cards: selectedCards }
+    payload: { playerId: player.id, handId: hand.id, cards: selectedCards }
   }));
 
   const handleChantEnvido = (level: number) => socket.send(JSON.stringify({
     event: "chantEnvido",
-    payload: { playerId: player.id, handId: game.id, level: level }
+    payload: { playerId: player.id, handId: hand.id, level: level }
   }));
 
   const handleResponseToEnvido = (envidoLevel: number) => socket.send(JSON.stringify({
     event: "responseToEnvido",
-    payload: { playerId: player.id, handId: game.id, level: envidoLevel }
+    payload: { playerId: player.id, handId: hand.id, level: envidoLevel }
   }));
 
   const handleChant = (envidoLevel: number) => isChanting ? handleResponseToEnvido(envidoLevel) : handleChantEnvido(envidoLevel);
 
   const handleAcceptEnvido = () => socket.send(JSON.stringify({
     event: "acceptEnvido",
-    payload: { playerId: player.id, handId: game.id }
+    payload: { playerId: player.id, handId: hand.id }
   }))
 
   const handleDeclilneEnvido = () => socket.send(JSON.stringify({
     event: "declineEnvido",
-    payload: { playerId: player.id, handId: game.id }
+    payload: { playerId: player.id, handId: hand.id }
   }))
 
   return (
     <div>
       {isChanting || isInProgress ?
         <>
-          Cantado: {game.envido.chanted.map(
+          Cantado: {hand.envido.chanted.map(
             (level: number, index: number) => <span key={index}> {EnvidoLevels[level]} </span>)
           }
           <div>
@@ -75,7 +75,7 @@ export default function EnvidoControls({ game, player, selectedCards, envidoValu
         :
         ''
       }
-      {game.envido.status === EnvidoStatus.ACCEPTED && isChantTurn ?
+      {hand.envido.status === EnvidoStatus.ACCEPTED && isChantTurn ?
         <div>
           Cantar:
           Clickea sobre las cartas y envía

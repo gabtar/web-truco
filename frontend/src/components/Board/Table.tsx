@@ -5,8 +5,9 @@ import './Board.css'
 function Table() {
     const { state } = useContext(TrucoContext);
     const { game, player } = state;
+    const hand = game.current_hand;
 
-    const cardsPlayedByPlayer = (playerId: string) => game.rounds.map((round, index) =>
+    const cardsPlayedByPlayer = (playerId: string) => hand.rounds.map((round, index) =>
       round.cards_played.get(playerId) === null ? '' :
       <div key={index} className="table-card">
         {round.cards_played.get(playerId)?.rank}{round.cards_played.get(playerId)?.suit}
@@ -18,9 +19,9 @@ function Table() {
             <>
               <div>
                 <p>👤 {user.name} { user.id === player.id ? <b>(Tú)</b> : ''}</p>
-                {game.player_hand === user.id ? <div className="badge">✋Mano</div> : ''}
-                {game.player_dealer === user.id ? <div className="badge">🂠 Repartidor</div> : ''}
-                {game.player_turn === user.id ? <div className="badge">Turno</div> : ''}
+                {hand.player_hand === user.id ? <div className="badge">✋Mano</div> : ''}
+                {hand.player_dealer === user.id ? <div className="badge">🂠 Repartidor</div> : ''}
+                {hand.player_turn === user.id ? <div className="badge">Turno</div> : ''}
               </div>
               {cardsPlayedByPlayer(user.id)}
             </>

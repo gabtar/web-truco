@@ -15,9 +15,9 @@ function GamesList() {
   }));
 
   // TODO on click llevar a la ruta de game interface
-  const handleJoinGame = (handId: number) => socket.send(JSON.stringify({
+  const handleJoinGame = (gameId: string) => socket.send(JSON.stringify({
     event: "joinGame",
-    payload: { playerId: player.id, handId: handId }
+    payload: { playerId: player.id, gameId: gameId }
   }));
 
   const gamesListRows = currentGames.map((game: Game) => 

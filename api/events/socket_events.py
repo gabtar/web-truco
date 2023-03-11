@@ -2,16 +2,20 @@ import json
 from datetime import datetime
 from typing import Dict, List
 from fastapi.encoders import jsonable_encoder
-from models.models import Hand, Player, Score, Card
+from models.models import Hand, Player, Score, Card, Game
 from services.connection_manager import ConnectionManager, dep_connection_manager
-from services.services import (
-    HandManager, ScoreManager, PlayerManager, TrucoManager, EnvidoManager
-)
+from services.game_manager import GameManager
+from services.hand_manager import HandManager
+from services.player_manager import PlayerManager
+from services.score_manager import ScoreManager
+from services.truco_manager import TrucoManager
+from services.envido_manager import EnvidoManager
 
 
 class SocketController:
     """ Controls socket events """
     _connection_manager: ConnectionManager
+    _game_manager: GameManager
     _hand_manager: HandManager
     _player_manager: PlayerManager
     _score_manager: ScoreManager
@@ -21,6 +25,7 @@ class SocketController:
     def __init__(
             self,
             connection_manager: ConnectionManager = dep_connection_manager(),
+            game_manager: GameManager = GameManager(),
             hand_manager: HandManager = HandManager(),
             player_manager: PlayerManager = PlayerManager(),
             score_manager: ScoreManager = ScoreManager(),
@@ -28,6 +33,7 @@ class SocketController:
             envido_manager: EnvidoManager = EnvidoManager()
             ):
         self._connection_manager = connection_manager
+        self._game_manager = game_manager
         self._hand_manager = hand_manager
         self._player_manager = player_manager
         self._score_manager = score_manager
@@ -71,7 +77,7 @@ class SocketController:
             playerId (str): the id of the player to send the update status of games.
         """
         games_list = [game.dict(include={'id', 'name', 'players'})
-                      for game in self._hand_manager.avaliable_games()]
+                      for game in self._game_manager.get_available_games()]
         for game in games_list:
             game['currentPlayers'] = len(game['players'])
             del game['players']
@@ -86,6 +92,22 @@ class SocketController:
         else:
             await self._connection_manager.broadcast(json_string=message)
 
+    async def gameUpdate(self, gameId: str):
+        """ Updates the game status to all players that joined that game
+
+        Args:
+            gameId (str): the id of the game to be updated to players
+        """
+        game: Game = self._game_manager.get_game(id=gameId)
+
+        message = json.dumps({
+                'event': 'gameUpdate',
+                'payload': {'game': jsonable_encoder(game.dict(exclude={'current_hand'}))}
+        })
+
+        for player in game.players:
+            await self._connection_manager.send(json_string=message, player_id=player.id)
+
     async def handUpdate(self, hand_id: int):
         """ Updates the hand status to all players playing the hand
 
@@ -93,8 +115,9 @@ class SocketController:
             handId (int): the id of the hand
         """
         hand: Hand = self._hand_manager.get_hand(id=hand_id)
+        players: List[Player] = self._game_manager.get_game(id=hand.id).players
 
-        for player in hand.players:
+        for player in players:
             hand_status = jsonable_encoder(hand)
             # Manda sólo las cartas del jugador corriente
             hand_status['cards_dealed'] = jsonable_encoder(hand.cards_dealed[player.id]) if hand.status != 'NOT_STARTED' else []
@@ -109,21 +132,30 @@ class SocketController:
 
             await self._connection_manager.send(json_string=data, player_id=player.id)
 
-    async def joinGame(self, handId: int, playerId: str):
+    async def joinGame(self, gameId: int, playerId: str):
         """ Joins a player to a hand
 
         Args:
             playerId (str): the id of the player to add to the hand.
             handId (int): the id of the hand to add a new player.
         """
-        self._hand_manager.join_hand(hand_id=handId, player_id=playerId)
+        game: Game = self._game_manager.get_game(id=gameId)
+        self._game_manager.join_game(game_id=gameId, player_id=playerId)
 
         await self._connection_manager.send(
                 json_string=json.dumps({'event': 'joinedHand'}),
                 player_id=playerId
         )
-        await self.handUpdate(hand_id=handId)
+        await self.gameUpdate(gameId=gameId)
         await self.gamesUpdate()
+
+        # If the game is full, create the hand and update to all players
+        if len(game.players) == game.rules:
+            self._hand_manager.new_hand(game_id=gameId)
+            self._hand_manager.initialize_hand(hand_id=gameId)
+
+            for player in game.players:
+                await self.handUpdate(hand_id=gameId)
 
     async def createNewGame(self, playerId: str):
         """ Creates a new game
@@ -131,9 +163,10 @@ class SocketController:
         Args:
             playerId (str): id of the player who creates the hand.
         """
-        hand_id = self._hand_manager.new_hand(player_id=playerId)
+        # TODO, for now all games are only for 2 players
+        game: Game = self._game_manager.create(num_players=2)
         # Joins the user to the recently created hand
-        await self.joinGame(playerId=playerId, handId=hand_id)
+        await self.joinGame(playerId=playerId, gameId=game.id)
 
     async def dealCards(self, playerId: str, handId: int):
         """ Deals cards in a hand
@@ -143,7 +176,7 @@ class SocketController:
             handId (int): id of the hand to deal cards.
         """
         self._hand_manager.deal_cards(hand_id=handId, player_id=playerId)
-        self._score_manager.initialize_score(hand=self._hand_manager.get_hand(id=handId))
+        self._score_manager.initialize_score(game_id=handId)
 
         await self.handUpdate(hand_id=handId)
 
@@ -163,16 +196,17 @@ class SocketController:
         await self.handUpdate(hand_id=hand.id)
 
         if hand.winner is not None:
-            await self.updateScore(handId=hand.id)
+            await self.updateScore(gameId=hand.id)
 
-    async def updateScore(self, handId: int):
+    async def updateScore(self, gameId: int):
         """ Updates the score in a game to all players
 
         Args:
             handId (int): id of the hand to play the card.
         """
         # TODO, por ahora queda todo harcodeado así, mejorar todo
-        hand: Hand = self._hand_manager.get_hand(id=handId)
+        hand: Hand = self._hand_manager.get_hand(id=gameId)
+        players: List[Player] = self._game_manager.get_game(id=gameId).players
 
         if hand.envido.winner is not None and hand.winner is None:
             # Acutaliza sólo envido
@@ -185,11 +219,11 @@ class SocketController:
                 },
             })
 
-            for player in hand.players:
+            for player in players:
                 await self._connection_manager.send(json_string=data, player_id=player.id)
 
         else: # Actualiza el score del truco y reinicia la mano
-            score: Score = self._score_manager.assign_truco_score(hand=hand)
+            score: Score = self._score_manager.assign_truco_score(game_id=gameId)
 
             data = json.dumps({
                 "event": "updateScore",
@@ -198,7 +232,7 @@ class SocketController:
                 },
             })
 
-            for player in hand.players:
+            for player in players:
                 await self._connection_manager.send(json_string=data, player_id=player.id)
 
             # TODO, por ahora reinicia toda la mano
@@ -235,7 +269,7 @@ class SocketController:
         self._truco_manager.response_to_truco(player_id=playerId, hand_id=handId, level=level)
 
         if hand.winner:
-            await self.updateScore(handId=hand.id)
+            await self.updateScore(gameId=hand.id)
             return
 
         await self.handUpdate(hand_id=hand.id)
@@ -270,7 +304,7 @@ class SocketController:
         self._envido_manager.decline_envido(player_id=playerId, hand_id=handId)
         # TODO should I also set envido score?
         if hand.envido.winner is not None:
-            await self.updateScore(handId=hand.id)
+            await self.updateScore(gameId=hand.id)
 
         await self.handUpdate(hand_id=handId)
 
@@ -282,7 +316,7 @@ class SocketController:
 
         # Si hay ganador, update score y continuar la mano
         if hand.envido.winner is not None:
-            await self.updateScore(handId=hand.id)
+            await self.updateScore(gameId=hand.id)
 
         await self.handUpdate(hand_id=handId)
 

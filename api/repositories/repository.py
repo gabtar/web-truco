@@ -1,6 +1,6 @@
 import abc
 from typing import List, Optional
-from models.models import Hand, Score, Player
+from models.models import Game, Hand, Score, Player
 
 
 class AbstractPlayerRepository(abc.ABC):
@@ -38,16 +38,16 @@ class InMemoryPlayersRepository(AbstractPlayerRepository):
         pass
 
 
-players_repository = InMemoryPlayersRepository()
+players_repository: InMemoryPlayersRepository = InMemoryPlayersRepository()
 
 
-def dep_players_repository() -> InMemoryPlayersRepository:
+def dep_players_repository() -> AbstractPlayerRepository:
     return players_repository
 
 
 class AbstractHandRepository(abc.ABC):
     @abc.abstractmethod
-    def get_by_id(self, id: int) -> Hand:
+    def get_by_id(self, id: str) -> Optional[Hand]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -63,14 +63,18 @@ class AbstractHandRepository(abc.ABC):
         raise NotImplementedError
 
 
-class InMemoryGamesRepository(AbstractHandRepository):
+class InMemoryHandRepository(AbstractHandRepository):
     _hands: List[Hand]
 
     def __init__(self):
         self._hands = []
 
-    def get_by_id(self, id: int) -> Hand:
-        return self._hands[id]
+    def get_by_id(self, id: str) -> Optional[Hand]:
+        for hand in self._hands:
+            if hand.id == id:
+                return hand
+
+        return None
 
     def get_availables(self) -> List[Hand]:
         avaliable_games = []
@@ -80,19 +84,19 @@ class InMemoryGamesRepository(AbstractHandRepository):
         return avaliable_games
 
     def save(self, hand: Hand) -> None:
-        hand.id = len(self._hands)
         self._hands.append(hand)
 
     def update(self, hand: Hand) -> None:
-        self._hands[hand.id] = hand
+        hand_index = self._hands.index(self.get_by_id(id=hand.id))
+        self._hands[hand_index] = hand
 
 
-games_repository = InMemoryGamesRepository()
+hand_repository: AbstractHandRepository = InMemoryHandRepository()
 
 
 # Singlenton for DI in services/managers
-def dep_games_repository():
-    return games_repository
+def dep_hand_repository() -> AbstractHandRepository:
+    return hand_repository
 
 
 class AbstractScoreRepository(abc.ABC):
@@ -130,8 +134,61 @@ class InMemoryScoreRepository(AbstractScoreRepository):
         self._scores[score_index] = score
 
 
-scores_repository = InMemoryScoreRepository()
+scores_repository: AbstractScoreRepository = InMemoryScoreRepository()
 
 
-def dep_scores_repository():
+def dep_scores_repository() -> AbstractScoreRepository:
     return scores_repository
+
+
+class AbstractGameRepository(abc.ABC):
+    @abc.abstractmethod
+    def get_by_id(self, id: str) -> Optional[Game]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def avaliable_games(self) -> List[Game]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def save(self, game: Game) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def update(self, game: Game) -> None:
+        raise NotImplementedError
+
+
+class InMemoryGameRepository(AbstractGameRepository):
+    _games: List[Game]
+
+    def __init__(self):
+        self._games = []
+
+    def get_by_id(self, id: int) -> Optional[Game]:
+        for game in self._games:
+            if game.id == id:
+                return game
+
+        return None
+
+    def avaliable_games(self) -> List[Game]:
+        availables = []
+        for game in self._games:
+            if len(game.players) < game.rules:
+                availables.append(game)
+        return availables
+
+    def save(self, game: Game) -> None:
+        self._games.append(game)
+
+    def update(self, game: Game) -> None:
+        game_index = self._scores.index(self.get_by_id(id=game.id))
+        self._games[game_index] = game
+
+
+game_repository: InMemoryGameRepository = InMemoryGameRepository()
+
+
+def dep_game_repository() -> AbstractGameRepository:
+    return game_repository
