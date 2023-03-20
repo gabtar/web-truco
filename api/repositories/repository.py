@@ -101,15 +101,15 @@ def dep_hand_repository() -> AbstractHandRepository:
 
 class AbstractScoreRepository(abc.ABC):
     @abc.abstractmethod
-    def get_by_id(self, id: int) -> Hand:
+    def get_by_id(self, id: str) -> Hand:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def save(self, hand: Hand) -> None:
+    def save(self, score: Score) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def update(self, hand: Hand) -> None:
+    def update(self, score: Score) -> None:
         raise NotImplementedError
 
 
@@ -119,7 +119,7 @@ class InMemoryScoreRepository(AbstractScoreRepository):
     def __init__(self):
         self._scores = []
 
-    def get_by_id(self, id: int) -> Optional[Score]:
+    def get_by_id(self, id: str) -> Optional[Score]:
         for score in self._scores:
             if score.id == id:
                 return score
@@ -175,7 +175,7 @@ class InMemoryGameRepository(AbstractGameRepository):
     def avaliable_games(self) -> List[Game]:
         availables = []
         for game in self._games:
-            if len(game.players) < game.rules:
+            if len(game.players) < game.rules['num_players']:
                 availables.append(game)
         return availables
 
@@ -183,7 +183,7 @@ class InMemoryGameRepository(AbstractGameRepository):
         self._games.append(game)
 
     def update(self, game: Game) -> None:
-        game_index = self._scores.index(self.get_by_id(id=game.id))
+        game_index = self._games.index(self.get_by_id(id=game.id))
         self._games[game_index] = game
 
 

@@ -150,7 +150,7 @@ class SocketController:
         await self.gamesUpdate()
 
         # If the game is full, create the hand and update to all players
-        if len(game.players) == game.rules:
+        if len(game.players) == game.rules['num_players']:
             self._hand_manager.new_hand(game_id=gameId)
             self._hand_manager.initialize_hand(hand_id=gameId)
 
@@ -163,12 +163,12 @@ class SocketController:
         Args:
             playerId (str): id of the player who creates the hand.
         """
-        # TODO, for now all games are only for 2 players
-        game: Game = self._game_manager.create(num_players=2)
+        # TODO, for now all games are only for 2 players and  up to 15 score, with no flor
+        game: Game = self._game_manager.create(rules={'num_players': 2, 'max_score': 15, 'flor': False})
         # Joins the user to the recently created hand
         await self.joinGame(playerId=playerId, gameId=game.id)
 
-    async def dealCards(self, playerId: str, handId: int):
+    async def dealCards(self, playerId: str, handId: str):
         """ Deals cards in a hand
 
         Args:
@@ -176,8 +176,12 @@ class SocketController:
             handId (int): id of the hand to deal cards.
         """
         self._hand_manager.deal_cards(hand_id=handId, player_id=playerId)
-        self._score_manager.initialize_score(game_id=handId)
 
+        if self._score_manager.get_score(game_id=handId) is None:
+            self._score_manager.initialize_score(game_id=handId)
+
+        # Hay que actualizar el game para setearle el score! inicial al front!
+        await self.updateScore(gameId=handId)
         await self.handUpdate(hand_id=handId)
 
     async def playCard(self, playerId: str, handId: int, rank: str, suit: str):
@@ -196,7 +200,11 @@ class SocketController:
         await self.handUpdate(hand_id=hand.id)
 
         if hand.winner is not None:
+            self._score_manager.assign_truco_score(game_id=hand.id)
+            self._hand_manager.initialize_hand(hand_id=handId)
             await self.updateScore(gameId=hand.id)
+            # TODO podria mandar una notificación del ganador
+            await self.handUpdate(hand_id=hand.id)
 
     async def updateScore(self, gameId: int):
         """ Updates the score in a game to all players
@@ -204,42 +212,23 @@ class SocketController:
         Args:
             handId (int): id of the hand to play the card.
         """
-        # TODO, por ahora queda todo harcodeado así, mejorar todo
-        hand: Hand = self._hand_manager.get_hand(id=gameId)
+        game: Game = self._game_manager.get_game(id=gameId)
+        score: Score = self._score_manager.get_score(game_id=gameId)
         players: List[Player] = self._game_manager.get_game(id=gameId).players
 
-        if hand.envido.winner is not None and hand.winner is None:
-            # Acutaliza sólo envido
-            score: Score = self._score_manager.assign_envido_score(hand=hand)
+        data = json.dumps({
+            "event": "updateScore",
+            "payload": {
+                "score": jsonable_encoder(score)
+            },
+        })
 
-            data = json.dumps({
-                "event": "updateScore",
-                "payload": {
-                    "score": jsonable_encoder(score)
-                },
-            })
+        for player in players:
+            await self._connection_manager.send(json_string=data, player_id=player.id)
 
-            for player in players:
-                await self._connection_manager.send(json_string=data, player_id=player.id)
-
-        else: # Actualiza el score del truco y reinicia la mano
-            score: Score = self._score_manager.assign_truco_score(game_id=gameId)
-
-            data = json.dumps({
-                "event": "updateScore",
-                "payload": {
-                    "score": jsonable_encoder(score)
-                },
-            })
-
-            for player in players:
-                await self._connection_manager.send(json_string=data, player_id=player.id)
-
-            # TODO, por ahora reinicia toda la mano
-            # En realidad hay que cambiar de repartidor, mano, y turno al jugador contrario
-            # al que estaba
-            self._hand_manager.initialize_hand(hand_id=hand.id)
-            await self.handUpdate(hand_id=hand.id)
+        # Si Finalizó la partida
+        if game.winner is not None:
+            await self.gameUpdate(gameId=gameId)
 
     async def chantTruco(self, playerId: str, handId: int, level: int):
         """ Handles the truco status of a hand
@@ -254,7 +243,7 @@ class SocketController:
 
         await self.handUpdate(hand_id=hand.id)
 
-    async def responseToTruco(self, playerId: str, handId: int, level: int):
+    async def responseToTruco(self, playerId: str, handId: str, level: int):
         """ Response to a chantTruco event
         If level is higher than the actual, it's chanted again to the opponent.
         If level is the same, then it's accepted.
@@ -262,15 +251,18 @@ class SocketController:
 
         Args:
             playerId (str): id of the player who is playing the card.
-            handId (int): id of the hand to play the card.
+            handId (str): id of the hand to play the card.
             level (Truco): the level of the truco chanted/accepted/declined.
         """
         hand = self._hand_manager.get_hand(id=handId)
         self._truco_manager.response_to_truco(player_id=playerId, hand_id=handId, level=level)
 
+        # Check if it was declined
         if hand.winner:
+            self._score_manager.assign_truco_score(game_id=handId)
             await self.updateScore(gameId=hand.id)
-            return
+            # TODO, Reiniciar la mano
+            self._hand_manager.initialize_hand(hand_id=handId)
 
         await self.handUpdate(hand_id=hand.id)
 
@@ -302,8 +294,8 @@ class SocketController:
         """ Declines envido in a Hand of Truco """
         hand: Hand = self._hand_manager.get_hand(id=handId)
         self._envido_manager.decline_envido(player_id=playerId, hand_id=handId)
-        # TODO should I also set envido score?
         if hand.envido.winner is not None:
+            self._score_manager.assign_envido_score(hand)
             await self.updateScore(gameId=hand.id)
 
         await self.handUpdate(hand_id=handId)
@@ -316,9 +308,25 @@ class SocketController:
 
         # Si hay ganador, update score y continuar la mano
         if hand.envido.winner is not None:
+            self._score_manager.assign_envido_score(hand)
             await self.updateScore(gameId=hand.id)
 
         await self.handUpdate(hand_id=handId)
+
+    async def goToDeck(self, gameId: str, playerId: str):
+        """ The player_id abandons the hand, assigning the actual score to the opponent """
+        hand: Hand = self._hand_manager.get_hand(id=gameId)
+        self._hand_manager.go_to_deck(game_id=gameId, player_id=playerId)
+
+        self._score_manager.assign_truco_score(game_id=gameId)
+        # Check if envido was chanted
+        if hand.envido.status != 'FINISHED' and len(hand.rounds) == 1:
+            self._score_manager.assign_envido_score(hand=hand)
+
+        await self.updateScore(gameId=gameId)
+        self._hand_manager.initialize_hand(hand_id=gameId)
+
+        await self.handUpdate(hand_id=gameId)
 
 
 socket = SocketController()

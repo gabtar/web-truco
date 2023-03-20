@@ -169,3 +169,19 @@ def test_cannot_play_a_card_when_its_not_player_turn(
 
     assert 'No es tu turno' in str(excep)
     assert hand.rounds[0].cards_played[player_dealer] is None
+
+
+def test_go_to_deck(
+            fake_hands_repository, fake_players_repository, fake_games_repository
+        ):
+    """ Tests that a player can go to deck """
+    hand_manager = HandManager(
+            hands=fake_hands_repository,
+            players=fake_players_repository,
+            games=fake_games_repository
+    )
+    hand: Hand = hand_manager.get_hand(id='game1')
+
+    hand_manager.go_to_deck(game_id=hand.id, player_id='player2')
+
+    assert hand.winner == 'player1'

@@ -2,7 +2,7 @@ import random
 
 from typing import List, Dict
 from models.models import (
-    Hand, Suit, Rank, Card, Player, Round, Truco, HandStatus, Envido
+    Hand, Suit, Rank, Card, Player, Round, Truco, HandStatus, Envido, EnvidoLevels
 )
 from services.exceptions import GameException
 from repositories.repository import (
@@ -120,13 +120,34 @@ class HandManager:
 
         self._hand_repository.update(hand)
 
+    def go_to_deck(self, game_id: str, player_id: str) -> None:
+        """ The player_id abandons the hand """
+        hand: Hand = self._hand_repository.get_by_id(id=game_id)
+        players: List[Player] = self._game_repository.get_by_id(id=game_id).players
+
+        if hand.player_turn != player_id:
+            raise GameException('No es tu turno')
+
+        opponent = [player for player in players if player.id != player_id]
+
+        # Si no terminó el envido son 2 puntos, envido no querido y truco no querido
+        if hand.envido.status != 'FINISHED' and len(hand.rounds) == 1:
+            # Hay que setear el envido como iniciado por el oponente
+            hand.envido.chanted.append(EnvidoLevels.ENVIDO)
+            hand.envido.points += 1  # no aceptado
+            hand.envido.winner = opponent[0].id
+
+        # Sets the opponent as winner in truco
+        hand.winner = opponent[0].id
+
+        self._hand_repository.update(hand=hand)
+
     def new_hand(self, game_id: str):
         """ Creates a new hand/game """
         hand = Hand()
         hand.id = game_id
         self._hand_repository.save(hand)
 
-    # Private
     # TODO, improve for multiple players
     def _next_player_turn(self, hand: Hand) -> str:
         """ Determines the turn of the next player in the hand """

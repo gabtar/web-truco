@@ -51,11 +51,11 @@ def fake_full_hand(fake_players_repository) -> Hand:
 def fake_games_repository(fake_players_repository) -> InMemoryGameRepository:
     games_repository: InMemoryGameRepository = InMemoryGameRepository()
 
-    fake_empty_game: Game = Game(rules=2)
+    fake_empty_game: Game = Game(rules={'num_players': 2, 'max_score': 15/30, 'flor': False})
     fake_empty_game.id = 'game0'
     games_repository.save(fake_empty_game)
 
-    fake_full_game: Game = Game(rules=2)
+    fake_full_game: Game = Game(rules={'num_players': 2, 'max_score': 15/30, 'flor': False})
     player1: Player = fake_players_repository.get_by_id(id='player1')
     player2: Player = fake_players_repository.get_by_id(id='player2')
     fake_full_game.players = [player1, player2]

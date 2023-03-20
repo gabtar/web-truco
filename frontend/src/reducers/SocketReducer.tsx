@@ -25,6 +25,7 @@ export const trucoReducer = (state: any, action: any) => {
         game: { ...state.game,
           id: payload.game.id,
           players: payload.game.players,
+          winner: payload.game.winner
         }
       };
 
@@ -70,7 +71,6 @@ export const trucoReducer = (state: any, action: any) => {
       for (const key in payload.score.score) {
         score.set(key, payload.score.score[key]);
       }
-      console.log(payload.score);
 
       return { ...state,
         game: { ...state.game,

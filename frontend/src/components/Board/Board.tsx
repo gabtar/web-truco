@@ -47,6 +47,11 @@ function Board() {
     payload: { playerId: player.id, handId: game.id, level: hand.truco_status + 1 }
   }));
 
+  const handleGoToDeck = () => socket.send(JSON.stringify({
+    event: "goToDeck",
+    payload: { playerId: player.id, gameId: game.id }
+  }));
+
   const handleClickCard = (card: Card) => {
     if (isEnvido) {
       handleSelectEnvidoCards(card);
@@ -60,6 +65,7 @@ function Board() {
   const isChantTurn = hand.chant_turn === player.id ? true : false;
   const canDeal = hand.player_dealer === player.id && hand.status === 'NOT_STARTED' ? true : false;
   const isFinished = hand.winner !== '' ? false : true;
+  const isGameFinished = game.winner ? true : false;
   const isNotStarted = hand.status === HandStatus.NOT_STARTED ? true : false;
   const isLocked = hand.status === HandStatus.LOCKED ? true : false;
   const envidoAvailable = !hand.envido.winner && hand.rounds.length === 1
@@ -84,10 +90,13 @@ function Board() {
   return (
     <>
       <div className="game-status">
-        {isFinished ? <h3>Ganador: {hand.winner} </h3> : ''}
-        <div className="table">
-          <Table />
-        </div>
+        {isGameFinished ?
+          <h1 className="winner-container">Ganador: {game.winner?.name} </h1>
+          :
+          <div className="table">
+            <Table />
+          </div>
+        }
         <div className="score-board">
           <ScoreBoard />
         </div>
@@ -95,25 +104,30 @@ function Board() {
       <div className="card-container">
         {cardsDealed}
       </div>
-      <div>
-        {canDeal ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : ''}
+      {!isGameFinished ?
+        <div>
+          {canDeal ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : ''}
 
-        {envidoAvailable ?
-          <EnvidoControls hand={hand} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
-          :
-          ''
-        }
+          {!isFinished ? <button onClick={handleGoToDeck} disabled={!isPlayerTurn || isNotStarted} className="btn">Ir al mazo</button> : ''}
 
+          {envidoAvailable ?
+            <EnvidoControls hand={hand} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
+            :
+            ''
+          }
 
-        <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || isNotStarted} onClick={handleChantTruco}>Cantar {Truco[hand.truco_status]}</button>
-        <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || !isPlayerTurn || isNotStarted}>Cantar Flor</button>
+          <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || isNotStarted} onClick={handleChantTruco}>Cantar {Truco[hand.truco_status]}</button>
+          <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || !isPlayerTurn || isNotStarted}>Cantar Flor</button>
 
-        {isLocked ?
-          <TrucoControls hand={hand} player={player} />
-          :
-          ''
-        }
-      </div>
+          {isLocked ?
+            <TrucoControls hand={hand} player={player} />
+            :
+            ''
+          }
+        </div>
+        :
+        ''
+      }
     </>
   );
 }

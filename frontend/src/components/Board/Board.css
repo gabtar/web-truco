@@ -79,3 +79,10 @@
   padding: .5rem;
   background-color: var(--blue);
 }
+
+.winner-container {
+  font-size: 2rem;
+  background-color: var(--blue);
+  border-radius: .3rem;
+  padding: 2rem;
+}

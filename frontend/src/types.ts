@@ -80,7 +80,6 @@ export type HandState = {
   truco_status: Truco,
   status: HandStatus,
   winner: string,
-  // TODO, separar el score de la mano?
 }
 
 export type GameState = {
@@ -88,6 +87,7 @@ export type GameState = {
   players: Player[],
   current_hand: HandState,
   score: Map<string, number>
+  winner?: Player
 }
 
 export type Round = {

@@ -33,7 +33,8 @@ const initialGameState : GameState = {
   id: '',
   players: [],
   current_hand: initialHandState,
-  score: new Map<string, number>()
+  score: new Map<string, number>(),
+  winner: undefined
 }
 
 const initialTrucoState : TrucoStateType = {
