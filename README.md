@@ -10,8 +10,8 @@ Juego de Truco Argentino usando websockets
 - [x] Mejorar el tema del score(llega hasta 15)
 - [x] Mejorar la lógica para determinar de quién es el siguiente turno. (ej si es parda juega el que empardó, etc)
 - [x] Armar modelo de toda una partida/juego
-- [ ] Delete player when disconect from socket
-- [ ] Remove game when ends?
+- [ ] Si se desconecta del socket pierde y anuncia ganador?
+- [ ] Anunciar ganador/Eliminar partida del repositorio
 
 ### Frontend:
 - [x] No se puede cantar(desactivar botones) nada si no se han repartido las cartas
