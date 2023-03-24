@@ -73,7 +73,6 @@ class HandManager:
         # Juega la carta y actualiza los turnos
         hand.rounds[-1].cards_played[player_id] = card
         hand.player_turn = self._next_player_turn(hand=hand)
-        # hand.update_turn_to_next_player
         hand.chant_turn = hand.player_turn
 
         round_finished = True
@@ -153,10 +152,21 @@ class HandManager:
         """ Determines the turn of the next player in the hand """
         players = self._game_repository.get_by_id(id=hand.id).players
 
-        player = [player for player in players if player.id == hand.player_turn]
-        player_turn_index = players.index(player[0])
+        # Reglas para determinar el turno:
+        # Siempre empieza el jugador a la derecha de la 'mano' y gira el turno hasta llegar al repartidor
+        # El que ganó el round es el que inicia el próximo round y rota en el mismo sentino
+        # Si va parda juega la siguiente carta el ultimo que empardó
 
-        if player_turn_index == len(players) - 1:
-            return players[0].id
+        # Si ya hay ganador, empieza el nuevo round el que ganó el anterior
+        if hand.rounds[-1].winner:
+            # Ojo, devuelve al último de la lista, que no necesariamente es el último que empardó
+            return hand.rounds[-1].winner[-1]
         else:
-            return players[player_turn_index + 1].id
+            # Sino sigo el orden normal de la lista hasta que todos juegan la carta y haya ganador
+            player = [player for player in players if player.id == hand.player_turn]
+            player_turn_index = players.index(player[0])
+
+            if player_turn_index == len(players) - 1:
+                return players[0].id
+            else:
+                return players[player_turn_index + 1].id

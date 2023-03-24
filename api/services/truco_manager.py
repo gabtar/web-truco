@@ -64,7 +64,6 @@ class TrucoManager:
 
         self._hand_repository.update(hand)
 
-    # Private
     def _next_player_chant_turn(self, hand: Hand) -> str:
         """ Determines the chant turn of the next player in the hand """
         players: List[Player] = self._game_repository.get_by_id(id=hand.id).players

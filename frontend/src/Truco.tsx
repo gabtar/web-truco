@@ -29,10 +29,11 @@ function Truco() {
       // TODO, delete, just to check the message sent via socket
       console.log("SOCKET: ",JSON.parse(message?.data));
 
-      // Notify errors
-      if (data.event === 'error') {
-        const { title, text } = data.payload
-        addNotification(title, text);
+      // Notifications
+      if (data.event === 'error' || data.event === 'notify') {
+        const { title, text, type } = data.payload
+        console.log(title, text, type);
+        addNotification(title, text, type);
         return;
       }
 
@@ -57,6 +58,7 @@ function Truco() {
           id={notification.id}
           title={notification.title} 
           message={notification.message}
+          type={notification.type}
           />
       )}
 

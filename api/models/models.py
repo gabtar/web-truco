@@ -138,7 +138,7 @@ class Round(BaseModel):
         return True
 
     @property
-    def winner(self) -> Optional[str]:
+    def winner(self) -> Optional[List[str]]:
         """ Determines the winner of a round in a Hand of truco
 
         Returns:

@@ -28,20 +28,16 @@ async def websocket_truco(
             try:
                 await socket_controller.call_event(event=data['event'], payload=data['payload'])
             except (Exception) as e:
-                # Notificación del error
-                error_message = json.dumps({
-                        'event': 'error',
-                        'payload': {
-                            'title': 'Error',
-                            'text': str(e)
-                        }
-                })
+                # Notificación del error al front
+                await socket_controller.call_event(
+                        event="notify",
+                        payload={'playerId': player_id, 'title': 'ERROR', 'message': str(e), 'type': 'ERROR'}
+                )
+                # Log del error en la consola
                 print("ERROR: ", data)
                 print("ERROR message: ", str(e))
-                await manager.send(json_string=error_message, player_id=data['payload']['playerId'])
 
     except WebSocketDisconnect:
         # TODO end the game, set a winner if user was playing a game
         # Notify all users
         manager.disconnect(websocket)
-        print("LOGGER:: User disconected")

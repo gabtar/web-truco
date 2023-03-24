@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Dict, List
 from fastapi.encoders import jsonable_encoder
-from models.models import Hand, Player, Score, Card, Game
+from models.models import Hand, Player, Score, Card, Game, EnvidoLevels, EnvidoStatus, Truco
 from services.connection_manager import ConnectionManager, dep_connection_manager
 from services.game_manager import GameManager
 from services.hand_manager import HandManager
@@ -91,6 +91,24 @@ class SocketController:
             await self._connection_manager.send(json_string=message, player_id=playerId)
         else:
             await self._connection_manager.broadcast(json_string=message)
+
+    async def notifyPlayers(self, gameId: str, title: str, text: str, type: str):
+        """ Notifies a message to all players in the game
+
+        Args:
+            playerId (str): the id of the player to send the message
+            title (str): the title of the message to be sent
+            message (str): the body of the message to be sent
+            type (str): type of the message (only 'INFO', 'ERROR')
+        """
+        game: Game = self._game_manager.get_game(id=gameId)
+
+        message = json.dumps({
+                'event': 'notify',
+                'payload': {'type': type, 'title': title, 'text': text}
+        })
+        for player in game.players:
+            await self._connection_manager.send(json_string=message, player_id=player.id)
 
     async def gameUpdate(self, gameId: str):
         """ Updates the game status to all players that joined that game
@@ -238,8 +256,16 @@ class SocketController:
             handId (int): id of the hand to play the card.
             level (Truco): the level of the truco chanted/accepted/declined.
         """
-        hand = self._hand_manager.get_hand(id=handId)
+        hand: Hand = self._hand_manager.get_hand(id=handId)
+        player: Player = self._player_manager.find_player(player_id=playerId)
         self._truco_manager.chant_truco(player_id=playerId, hand_id=handId, level=level)
+
+        await self.notifyPlayers(
+                gameId=handId,
+                title='Truco',
+                text=f"{player.name} cantó {Truco(level).name}",
+                type='INFO'
+        )
 
         await self.handUpdate(hand_id=hand.id)
 
@@ -254,19 +280,35 @@ class SocketController:
             handId (str): id of the hand to play the card.
             level (Truco): the level of the truco chanted/accepted/declined.
         """
-        hand = self._hand_manager.get_hand(id=handId)
+        hand: Hand = self._hand_manager.get_hand(id=handId)
+        current_level = hand.truco_status
+        player: Player = self._player_manager.find_player(player_id=playerId)
         self._truco_manager.response_to_truco(player_id=playerId, hand_id=handId, level=level)
 
         # Check if it was declined
         if hand.winner:
             self._score_manager.assign_truco_score(game_id=handId)
             await self.updateScore(gameId=hand.id)
-            # TODO, Reiniciar la mano
+
+            await self.notifyPlayers(
+                    gameId=handId,
+                    title='Truco',
+                    text=f"{player.name}: No quiero",
+                    type='INFO'
+            )
             self._hand_manager.initialize_hand(hand_id=handId)
+        else:
+            # Se cantó/aceptó, enviar mensaje a los jugadores
+            await self.notifyPlayers(
+                    gameId=handId,
+                    title='Truco',
+                    text=f"{player.name+': Quiero' if current_level == hand.truco_status  else player.name+': quiero '+Truco(level).name}",
+                    type='INFO'
+            )
 
         await self.handUpdate(hand_id=hand.id)
 
-    async def chantEnvido(self, playerId: str, handId: int, level: int):
+    async def chantEnvido(self, playerId: str, handId: str, level: int):
         """ Chants envido to the opponent
 
         Args:
@@ -275,25 +317,57 @@ class SocketController:
             level (Truco): the level of the truco chanted/accepted/declined.
         """
         self._envido_manager.chant_envido(player_id=playerId, hand_id=handId, level=level)
+        player: Player = self._player_manager.find_player(player_id=playerId)
+
+        await self.notifyPlayers(
+                gameId=handId,
+                title='Envido',
+                text=f"{player.name} cantó {EnvidoLevels(level).name}",
+                type='INFO'
+        )
 
         await self.handUpdate(hand_id=handId)
 
-    async def responseToEnvido(self, playerId: str, handId: int, level: int):
+    async def responseToEnvido(self, playerId: str, handId: str, level: int):
         """ Response to a envido to the opponent """
         self._envido_manager.response_to_envido(player_id=playerId, hand_id=handId, level=level)
+        player: Player = self._player_manager.find_player(player_id=playerId)
 
+        await self.notifyPlayers(
+                gameId=handId,
+                title='Envido',
+                text=f"{player.name} cantó {EnvidoLevels(level).name}",
+                type='INFO'
+        )
         await self.handUpdate(hand_id=handId)
 
     async def acceptEnvido(self, playerId: str, handId: int):
         """ Accepts an envido play """
         self._envido_manager.accept_envido(player_id=playerId, hand_id=handId)
+        player: Player = self._player_manager.find_player(player_id=playerId)
+
+        await self.notifyPlayers(
+                gameId=handId,
+                title='Envido',
+                text=f"{player.name} acepta el envido",
+                type='INFO'
+        )
 
         await self.handUpdate(hand_id=handId)
 
     async def declineEnvido(self, playerId: str, handId: int):
         """ Declines envido in a Hand of Truco """
         hand: Hand = self._hand_manager.get_hand(id=handId)
+        player: Player = self._player_manager.find_player(player_id=playerId)
         self._envido_manager.decline_envido(player_id=playerId, hand_id=handId)
+
+        await self.notifyPlayers(
+            gameId=handId,
+            title='Envido',
+            text=f"{player.name} no acepta el envido",
+            type='INFO'
+        )
+
         if hand.envido.winner is not None:
             self._score_manager.assign_envido_score(hand)
             await self.updateScore(gameId=hand.id)
@@ -303,8 +377,16 @@ class SocketController:
     async def playEnvido(self, playerId: str, handId: int, cards: List):
         """ Plays the cards for envido """
         hand: Hand = self._hand_manager.get_hand(id=handId)
+        player: Player = self._player_manager.find_player(player_id=playerId)
         envido_cards = [Card(**card) for card in cards]
         self._envido_manager.play_envido(hand_id=handId, player_id=playerId, cards=envido_cards)
+
+        await self.notifyPlayers(
+            gameId=handId,
+            title='Envido',
+            text=f"{player.name} canta {self._envido_manager._calculate_envido(envido_cards)}",
+            type='INFO'
+        )
 
         # Si hay ganador, update score y continuar la mano
         if hand.envido.winner is not None:
@@ -316,7 +398,15 @@ class SocketController:
     async def goToDeck(self, gameId: str, playerId: str):
         """ The player_id abandons the hand, assigning the actual score to the opponent """
         hand: Hand = self._hand_manager.get_hand(id=gameId)
+        player: Player = self._player_manager.find_player(player_id=playerId)
         self._hand_manager.go_to_deck(game_id=gameId, player_id=playerId)
+
+        await self.notifyPlayers(
+            gameId=gameId,
+            title='Partida',
+            text=f"{player.name} se va al mazo",
+            type='INFO'
+        )
 
         self._score_manager.assign_truco_score(game_id=gameId)
         # Check if envido was chanted

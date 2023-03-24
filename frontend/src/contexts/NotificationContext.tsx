@@ -5,19 +5,19 @@ const initialNotifications = new Array<Notification>();
 
 const NotificationContext = createContext({
   notifications: initialNotifications,
-  addNotification: (text: string, message: string) => {}
+  addNotification: (text: string, message: string, type: string) => {}
 });
 
 const NotificationProvider: React.FC<any> = ({children}) => {
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
 
   const addNotification = useCallback(
-  (title: string, message: string) => {
+  (title: string, message: string, type: string) => {
        const notification_id = new Date().valueOf();
 
        setNotifications([
           ...notifications, 
-          { id: new Date().valueOf() , title: title, message: message} as Notification]
+          { id: new Date().valueOf() , title: title, message: message, type: type} as Notification]
        )
 
        // Removes the notification after 3sec

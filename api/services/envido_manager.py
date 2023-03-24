@@ -119,7 +119,6 @@ class EnvidoManager:
 
         self._hand_repository.update(hand)
 
-    # Private
     def _calculate_envido(self, cards: List[Card]) -> int:
         """ Calculates the envido value for the cards passed """
         if len(cards) == 2:

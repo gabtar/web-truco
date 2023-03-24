@@ -5,17 +5,7 @@ from services.player_manager import PlayerManager
 from repositories.repository import dep_players_repository
 
 
-class Singleton(type):
-    """ Metaclass for generating singletons """
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class ConnectionManager(metaclass=Singleton):
+class ConnectionManager:
     """ Handles real time connections via websockets """
     active_connections: dict[str, WebSocket] = {}
     player_service: PlayerManager = PlayerManager(dep_players_repository())
@@ -40,6 +30,7 @@ class ConnectionManager(metaclass=Singleton):
         for id, socket in self.active_connections.items():
             if socket == websocket:
                 player_id = id
+        # TODO, I should also remove the player from players repository
         del self.active_connections[player_id]
 
     async def send(self, json_string: str, player_id: str):
@@ -55,9 +46,5 @@ class ConnectionManager(metaclass=Singleton):
 manager = ConnectionManager()
 
 
-# A callable for the Dependency Injection system of FastApi
-# No se bien porque el singleton no esta funcionando bien con Depends(),
-# cuando instancia el ConnectionManager. De momento funciona bien devolviendolo
-# con esta función la única instancia en el servidor
 def dep_connection_manager():
     return manager

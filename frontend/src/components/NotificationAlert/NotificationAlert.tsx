@@ -1,10 +1,10 @@
 import { Notification } from '../../types';
 import './NotificationAlert.css';
 
-function NotificationAlert({title, message} : Notification) {
+function NotificationAlert({title, message, type} : Notification) {
 
   return(
-    <div className="Notification">
+    <div className={"notification " + (type === 'ERROR' ? 'error' : 'info')}>
       {title}: {message}
     </div>
   )

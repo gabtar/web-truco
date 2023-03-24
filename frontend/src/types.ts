@@ -23,6 +23,7 @@ export interface Notification {
   id: number
   title: string,
   message: string,
+  type: string
 }
 
 // Contexto de la partida
