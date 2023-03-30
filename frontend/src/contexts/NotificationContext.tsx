@@ -14,18 +14,17 @@ const NotificationProvider: React.FC<any> = ({children}) => {
   const addNotification = useCallback(
   (title: string, message: string, type: string) => {
        const notification_id = new Date().valueOf();
-
-       setNotifications([
-          ...notifications, 
-          { id: new Date().valueOf() , title: title, message: message, type: type} as Notification]
-       )
-
        // Removes the notification after 3sec
        setTimeout(
         () => setNotifications((notifications) =>
             notifications.filter((notification) => notification.id !== notification_id)
           )
        , 3000);
+
+       setNotifications([
+          ...notifications, 
+          { id: new Date().valueOf() , title: title, message: message, type: type} as Notification]
+       )
 
        }
   , [notifications, setNotifications]);

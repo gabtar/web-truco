@@ -10,7 +10,7 @@ function Table() {
     const cardsPlayedByPlayer = (playerId: string) => hand.rounds.map((round, index) =>
       round.cards_played.get(playerId) === null ? '' :
       <div key={index} className="table-card">
-        {round.cards_played.get(playerId)?.rank}{round.cards_played.get(playerId)?.suit}
+        <img src={`./assets/images/cards/${round.cards_played.get(playerId)?.rank}${round.cards_played.get(playerId)?.suit}.png`} />
       </div>
     );
 

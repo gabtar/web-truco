@@ -84,7 +84,9 @@ function Board() {
   const isCardDisabled = (card: Card): boolean => isEnvido ? !isChantTurn : (!isPlayerTurn || cardAlreadyPlayed(card));
 
   const cardsDealed = hand.cards_dealed.map((card: Card, index: number) =>
-    <button key={index} className={selectedCards?.includes(card) ? "spanish-card selected" : "spanish-card"} disabled={isCardDisabled(card)} onClick={() => handleClickCard(card)}>{card.rank}{card.suit}</button>
+    <button key={index} className={selectedCards?.includes(card) ? "spanish-card selected" : "spanish-card"} disabled={isCardDisabled(card)} onClick={() => handleClickCard(card)}>
+      <img src={`./assets/images/cards/${card.rank}${card.suit}.png`} />
+    </button>
   );
 
   return (
@@ -101,20 +103,20 @@ function Board() {
           <ScoreBoard />
         </div>
       </div>
-      <div className="card-container">
-        {cardsDealed}
-      </div>
       {!isGameFinished ?
         <div>
+          <div className="card-container">
+            {cardsDealed}
+          </div>
           {canDeal ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : ''}
-
-          {!isFinished ? <button onClick={handleGoToDeck} disabled={!isPlayerTurn || isNotStarted} className="btn">Ir al mazo</button> : ''}
 
           {envidoAvailable ?
             <EnvidoControls hand={hand} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
             :
             ''
           }
+
+          {!isFinished ? <button onClick={handleGoToDeck} disabled={!isPlayerTurn || isNotStarted} className="btn">Ir al mazo</button> : ''}
 
           <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || isNotStarted} onClick={handleChantTruco}>Cantar {Truco[hand.truco_status]}</button>
           <button className="btn" disabled={!isPlayerTurn || !isChantTurn || isFinished || !isPlayerTurn || isNotStarted}>Cantar Flor</button>

@@ -26,19 +26,16 @@ function Truco() {
   const onSocketEvent = useCallback(
     (message: any) => {
       const data = JSON.parse(message?.data);
-      // TODO, delete, just to check the message sent via socket
-      console.log("SOCKET: ",JSON.parse(message?.data));
 
-      // Notifications
+      // Handles Notifications
       if (data.event === 'error' || data.event === 'notify') {
         const { title, text, type } = data.payload
-        console.log(title, text, type);
         addNotification(title, text, type);
         return;
       }
 
       dispatch(data);
-    }, [dispatch, addNotification],
+    }, [],
   );
 
   useEffect(() => {

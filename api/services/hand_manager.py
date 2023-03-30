@@ -101,8 +101,6 @@ class HandManager:
 
         hand.player_dealer = random.choice(players).id
         for player in players:
-            # TODO, necesario por ahora para limpiar las cartas repartidas
-            # Cuando se reinicia la mano
             hand.cards_dealed[player.id] = []
 
             if player.id != hand.player_dealer:

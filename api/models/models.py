@@ -212,7 +212,6 @@ class Game(BaseModel):
     id: Optional[str]
     name: str = 'Nueva partida'
     players: List[Player] = []
-    current_hand: Optional[Hand]  # viene del repositorio de hand, si existe
-    score: Optional[Score]  # Viene del repositorio de scores, si existe
     rules: Dict[str, Union[int, bool]]  # -> ej { 'num_players': 2, 'max_score': 15/30, 'flor': False}
     winner: Optional[Player]
+    status: str = 'NOT_STARTED'

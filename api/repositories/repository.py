@@ -33,9 +33,12 @@ class InMemoryPlayersRepository(AbstractPlayerRepository):
         self._players.append(player)
 
     def update(self, player: Player) -> None:
-        # Obtengo el index del jugador en el array
-        # lo reeemplazo
+        # TODO feature to change name?
         pass
+
+    def remove(self, player: Player) -> None:
+        player_index = self._players.index(self.get_by_id(id=player.id))
+        del self._players[player_index]
 
 
 players_repository: InMemoryPlayersRepository = InMemoryPlayersRepository()
@@ -56,6 +59,10 @@ class AbstractHandRepository(abc.ABC):
 
     @abc.abstractmethod
     def update(self, hand: Hand) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def remove(self, hand: Hand) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -85,6 +92,10 @@ class InMemoryHandRepository(AbstractHandRepository):
 
     def save(self, hand: Hand) -> None:
         self._hands.append(hand)
+
+    def remove(self, hand: Hand) -> None:
+        hand_index = self._hands.index(self.get_by_id(id=hand.id))
+        del self._hands[hand_index]
 
     def update(self, hand: Hand) -> None:
         hand_index = self._hands.index(self.get_by_id(id=hand.id))
@@ -158,6 +169,10 @@ class AbstractGameRepository(abc.ABC):
     def update(self, game: Game) -> None:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def remove(self, game: Game) -> None:
+        raise NotImplementedError
+
 
 class InMemoryGameRepository(AbstractGameRepository):
     _games: List[Game]
@@ -185,6 +200,10 @@ class InMemoryGameRepository(AbstractGameRepository):
     def update(self, game: Game) -> None:
         game_index = self._games.index(self.get_by_id(id=game.id))
         self._games[game_index] = game
+
+    def remove(self, game: Game) -> None:
+        game_index = self._games.index(self.get_by_id(id=game.id))
+        del self._games[game_index]
 
 
 game_repository: InMemoryGameRepository = InMemoryGameRepository()

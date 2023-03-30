@@ -11,7 +11,7 @@ Juego de Truco Argentino usando websockets
 - [x] Mejorar la lógica para determinar de quién es el siguiente turno. (ej si es parda juega el que empardó, etc)
 - [x] Armar modelo de toda una partida/juego
 - [ ] Si se desconecta del socket pierde y anuncia ganador?
-- [ ] Anunciar ganador/Eliminar partida del repositorio
+- [x] Anunciar ganador/Eliminar partida del repositorio
 
 ### Frontend:
 - [x] No se puede cantar(desactivar botones) nada si no se han repartido las cartas
@@ -21,7 +21,7 @@ Juego de Truco Argentino usando websockets
 - [x] Notificar por alert cuando finaliza la mano/gana un jugador/canta truco
 - [ ] Ver el tema del routeo a la partida, hay un error en la consola js
 - [ ] Pasar layout del juego a css grid?
-- [ ] Imágenes de las cartas
+- [x] Imágenes de las cartas
 
 ### Otros:
 - [x] Dockerizar en algún momento

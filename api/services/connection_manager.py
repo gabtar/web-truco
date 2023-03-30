@@ -30,7 +30,7 @@ class ConnectionManager:
         for id, socket in self.active_connections.items():
             if socket == websocket:
                 player_id = id
-        # TODO, I should also remove the player from players repository
+        self.player_service.remove_player(player_id=player_id)
         del self.active_connections[player_id]
 
     async def send(self, json_string: str, player_id: str):

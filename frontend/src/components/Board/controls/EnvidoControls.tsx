@@ -14,6 +14,7 @@ export default function EnvidoControls({ hand, player, selectedCards, envidoValu
 
   const isDisabled = !isEnvido || !isChantTurn;
 
+  // TODO, reset las cartas elegidas
   const handlePlayEnvido = () => socket.send(JSON.stringify({
     event: "playEnvido",
     payload: { playerId: player.id, handId: hand.id, cards: selectedCards }
@@ -43,6 +44,17 @@ export default function EnvidoControls({ hand, player, selectedCards, envidoValu
 
   return (
     <div>
+      {hand.envido.status === EnvidoStatus.ACCEPTED && isChantTurn ?
+        <div>
+          Envido:
+          Clickeá sobre las cartas y envía
+          <button className="btn" onClick={handlePlayEnvido}>
+            Enviar {envidoValue}
+          </button>
+        </div>
+        :
+        ''
+      }
       {isChanting || isInProgress ?
         <>
           Cantado: {hand.envido.chanted.map(
@@ -72,17 +84,6 @@ export default function EnvidoControls({ hand, player, selectedCards, envidoValu
             ''
           }
         </>
-        :
-        ''
-      }
-      {hand.envido.status === EnvidoStatus.ACCEPTED && isChantTurn ?
-        <div>
-          Cantar:
-          Clickea sobre las cartas y envía
-          <button className="btn" onClick={handlePlayEnvido}>
-            Enviar {envidoValue}
-          </button>
-        </div>
         :
         ''
       }

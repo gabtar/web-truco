@@ -50,7 +50,6 @@ class ScoreManager:
         self._check_winner(game_id=hand.id)
         return score
 
-    # TODO/REFACTOR, debería pasarle directamente el game_id
     def assign_envido_score(self, hand: Hand) -> Score:
         """ Assigns the score of the envido of the passed hand """
         score: Score = self._score_repository.get_by_id(id=hand.id)
@@ -60,7 +59,6 @@ class ScoreManager:
         self._check_winner(game_id=hand.id)
         return score
 
-    # TODO, define el ganador si alcanzo el max score de la partida
     def _check_winner(self, game_id: str) -> None:
         """ Sets the winner of a game (if exists) """
         game: Game = self._game_repository.get_by_id(id=game_id)
