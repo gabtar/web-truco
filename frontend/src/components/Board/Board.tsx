@@ -93,7 +93,7 @@ function Board() {
     <>
       <div className="game-status">
         {isGameFinished ?
-          <h1 className="winner-container">Ganador: {game.winner?.name} </h1>
+          <div className="winner-container">Ganador: {game.winner?.name} </div>
           :
           <div className="table">
             <Table />
@@ -103,13 +103,14 @@ function Board() {
           <ScoreBoard />
         </div>
       </div>
-      {!isGameFinished ?
+
+      {canDeal ? <button onClick={handleDealCards} className="btn margin">Repartir Mano</button> : ''}
+
+      {(!isGameFinished && game.current_hand?.status !== HandStatus.NOT_STARTED) ?
         <div>
           <div className="card-container">
             {cardsDealed}
           </div>
-          {canDeal ? <button onClick={handleDealCards} className="btn">Repartir Mano</button> : ''}
-
           {envidoAvailable ?
             <EnvidoControls hand={hand} player={player} selectedCards={selectedCards} envidoValue={envidoValue} />
             :

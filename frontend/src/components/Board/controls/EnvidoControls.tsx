@@ -57,9 +57,15 @@ export default function EnvidoControls({ hand, player, selectedCards, envidoValu
       }
       {isChanting || isInProgress ?
         <>
-          Cantado: {hand.envido.chanted.map(
-            (level: number, index: number) => <span key={index}> {EnvidoLevels[level]} </span>)
-          }
+         {hand.envido.chanted.length > 0 ?
+          <>
+            Cantado: {hand.envido.chanted.map(
+              (level: number, index: number) => <span key={index}> {EnvidoLevels[level]} </span>)
+            }
+          </>
+          :
+          ''
+         }
           <div>
             <button className="btn" disabled={!isChantTurn} onClick={() => handleChant(EnvidoLevels.Envido)}>Envido</button>
             <button className="btn" disabled={!isChantTurn} onClick={() => handleChant(EnvidoLevels.RealEnvido)}>Real Envido</button>

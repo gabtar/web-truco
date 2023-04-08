@@ -8,7 +8,7 @@ function ScoreBoard() {
 
   return (
     <>
-      <h1>Puntaje</h1>
+      <h3>Puntaje</h3>
       <table className="score-table">
         <thead>
           <tr>

@@ -14,11 +14,11 @@
 
 .score-table thead tr td,
 .score-table tbody tr td{
-  padding: 1rem;
+  padding: .3rem;
 }
 
 .score-table tbody tr td{
-  font-size: 2rem;
+  font-size: 1.2rem;
 }
 
 .score-table tbody tr td:first-child {
